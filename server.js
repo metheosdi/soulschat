@@ -8,7 +8,7 @@ const server = http.createServer(app);
 // Configura o Socket.io para permitir conexões de qualquer lugar (CORS)
 const io = socketIo(server, {
   cors: {
-    origin: "*", // IMPORTANTE: No futuro, troque "*" pela URL do seu frontend no Netlify para mais segurança
+    origin: "https://soulschat.netlify.app", // IMPORTANTE: No futuro, troque "*" pela URL do seu frontend no Netlify para mais segurança
     methods: ["GET", "POST"]
   }
 });
@@ -39,3 +39,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Servidor ouvindo na porta ${PORT}`);
 });
+
