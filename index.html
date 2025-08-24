@@ -1,300 +1,149 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Souls</title>
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-    <style>
-        :root {
-            --color-bg: #222;
-            --color-ui-dark: #111;
-            --color-ui-light: #332;
-            --color-accent: #753;
-            --color-text: #ddd;
-        }
-        body {
-            font-family: 'Times New Roman', serif;
-            background-color: var(--color-bg);
-            color: var(--color-text);
-            margin: 0;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            box-sizing: border-box;
-        }
-        .header {
-            text-align: center;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #333;
-        }
-        #chat-container {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            padding: 1rem 0;
-        }
-        .message {
-            background: #441201;
-            color: #fff;
-            padding: 0.8rem 1.2rem;
-            border-radius: 5px;
-            max-width: 80%;
-            align-self: flex-start;
-            word-wrap: break-word;
-            border: 1px solid var(--color-accent);
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
-        }
-        .message.self {
-            align-self: flex-end;
-            background: #1a3a2b;
-        }
-        .system-msg {
-            color: #aaa;
-            font-style: italic;
-            align-self: center;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        #creator-menu {
-            background-color: var(--color-ui-light);
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            border: 1px solid var(--color-accent);
-        }
-        .dropdown {
-            width: 100%;
-            padding: 0.5rem;
-            margin-bottom: 1rem;
-            background-color: var(--color-ui-dark);
-            color: var(--color-text);
-            border: 1px solid var(--color-accent);
-            border-radius: 4px;
-        }
-        #send-button {
-            width: 100%;
-            padding: 0.8rem;
-            background-color: var(--color-accent);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .menu-section {
-            margin-bottom: 1rem;
-        }
-        #connection-status {
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Message App</h1>
-        <p>Status: <span id="connection-status">🔴 Desconectado</span></p>
-    </div>
+<script>
+    // ********************************************
+    // CONFIGURAÇÃO IMPORTANTE: URL DO SEU BACKEND
+    // ********************************************
+    const serverUrl = 'https://cdn.socket.io/4.5.0/socket.io.min.js'; // Substitua pela sua URL real
+    // ********************************************
 
-    <div id="chat-container">
-        <div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>
-    </div>
+    let socket = null;
+    let isTryingToReconnect = false;
+    const statusElement = document.getElementById('connection-status');
 
-    <div id="creator-menu">
-        <div class="menu-section">
-            <select class="dropdown" id="template-1">
-                <option value="">[Modelo]</option>
-                <option value="Cuidado com ****">Cuidado com ****</option>
-                <option value="**** à frente">**** à frente</option>
-                <option value="Inimigo ****">Inimigo ****</option>
-                <option value="Item ****">Item ****</option>
-                <option value="****">****</option>
-                <option value="Avante, ****">Avante, ****</option>
-                <option value="Ahh, ****...">Ahh, ****...</option>
-            </select>
-            <select class="dropdown" id="word-1">
-                <option value="">[Palavra]</option>
-                <optgroup label="Inimigos">
-                    <option value="cão">cão</option>
-                    <option value="dragão">dragão</option>
-                    <option value="cavaleiro">cavaleiro</option>
-                </optgroup>
-                <optgroup label="Lugares">
-                    <option value="casa">casa</option>
-                    <option value="penhasco">penhasco</option>
-                    <option value="masmorra">masmorra</option>
-                </optgroup>
-                <optgroup label="Conceitos">
-                    <option value="desespero">desespero</option>
-                    <option value="alma">alma</option>
-                    <option value="sorte">sorte</option>
-                </optgroup>
-            </select>
-        </div>
+    function connectToServer() {
+        // Se já existe uma conexão, não cria outra
+        if (socket?.connected) {
+            console.log('Já conectado. Ignorando tentativa de reconexão.');
+            return;
+        }
 
-        <div class="menu-section" id="second-line" style="display: none;">
-            <select class="dropdown" id="conjunction">
-                <option value="">[Conjunção]</option>
-                <option value="e depois">e depois</option>
-                <option value="mas cuidado com">mas cuidado com</option>
-                <option value="portanto">portanto</option>
-                <option value="ou então">ou então</option>
-            </select>
-            <select class="dropdown" id="template-2">
-                <option value="">[Modelo 2]</option>
-                <option value="****">****</option>
-                <option value="encontre ****">encontre ****</option>
-                <option value="use ****">use ****</option>
-            </select>
-            <select class="dropdown" id="word-2">
-                <option value="">[Palavra 2]</option>
-                <option value="amigo">amigo</option>
-                <option value="item">item</option>
-                <option value="ataque saltado">ataque saltado</option>
-            </select>
-        </div>
+        // Se já existe um socket (mesmo desconectado), destrói a instância anterior para evitar lixo
+        if (socket) {
+            socket.removeAllListeners(); // Remove todos os ouvintes de eventos antigos
+            socket.disconnect(); // Força a desconexão da instância anterior
+        }
 
-        <div class="menu-section">
-            <select class="dropdown" id="gesture">
-                <option value="">[Gestos]</option>
-                <option value="👋">Saudação</option>
-                <option value="👉">Apontar</option>
-                <option value="✌️">Vitória</option>
-                <option value="😩">Desespero</option>
-            </select>
-        </div>
-        <button id="send-button">Deixar Mensagem</button>
-    </div>
+        console.log('Tentando conectar ao servidor...');
+        isTryingToReconnect = true;
+        // Tenta conectar ao servidor
+        socket = io(serverUrl);
 
-    <script>
-        // ********************************************
-        // CONFIGURAÇÃO IMPORTANTE: URL DO SEU BACKEND
-        // ********************************************
-        // SUBSTITUA ISSO pela URL que o Render vai te dar após o deploy do backend!
-        // Exemplo: 'https://meu-servidor-souls.onrender.com'
-        const serverUrl = 'https://soulschat.onrender.com';
-        // ********************************************
+        socket.on('connect', () => {
+            console.log('Conectado!');
+            isTryingToReconnect = false;
+            statusElement.textContent = '🟢 Conectado';
+            statusElement.style.color = 'lightgreen';
+            addSystemMessage('Você se conectou ao chat.');
+        });
 
-        let socket = null;
-        const statusElement = document.getElementById('connection-status');
+        socket.on('disconnect', (reason) => {
+            console.log('Desconectado:', reason);
+            statusElement.textContent = '🔴 Desconectado';
+            statusElement.style.color = 'lightpink';
+            addSystemMessage('Você foi desconectado. Tentando reconectar...');
 
-        function connectToServer() {
-            // Tenta conectar ao servidor
-            socket = io(serverUrl);
-
-            socket.on('connect', () => {
-                statusElement.textContent = '🟢 Conectado';
-                statusElement.style.color = 'lightgreen';
-                addSystemMessage('Você se conectou ao chat.');
-            });
-
-            socket.on('disconnect', (reason) => {
-                statusElement.textContent = '🔴 Desconectado';
-                statusElement.style.color = 'lightpink';
-                addSystemMessage('Você foi desconectado. Tentando reconectar...');
-                // Tentativa de reconexão automática após 3 segundos
+            // Tentativa de reconexão automática após 3 segundos
+            // Usa uma flag para evitar múltiplas tentativas simultâneas
+            if (!isTryingToReconnect) {
                 setTimeout(connectToServer, 3000);
-            });
-
-            socket.on('receber-mensagem', (data) => {
-                addMessageToChat(data.texto, false);
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('Erro de conexão:', error);
-                addSystemMessage('Falha ao conectar ao servidor. Verifique a URL.');
-            });
-        }
-
-        // Inicia a conexão quando a página carrega
-        window.addEventListener('load', connectToServer);
-
-        // Controle de UI
-        const template1 = document.getElementById('template-1');
-        const word1 = document.getElementById('word-1');
-        const secondLine = document.getElementById('second-line');
-
-        function updateSecondLineVisibility() {
-            secondLine.style.display = (template1.value && word1.value) ? 'block' : 'none';
-        }
-        word1.addEventListener('change', updateSecondLineVisibility);
-        template1.addEventListener('change', updateSecondLineVisibility);
-
-        // Enviar Mensagem
-        document.getElementById('send-button').addEventListener('click', enviarMensagem);
-
-        function enviarMensagem() {
-            const t1 = template1.value;
-            const w1 = word1.value;
-            const conj = document.getElementById('conjunction').value;
-            const t2 = document.getElementById('template-2').value;
-            const w2 = document.getElementById('word-2').value;
-            const gesto = document.getElementById('gesture').value;
-
-            if (!t1 || !w1) {
-                alert('Precursor, complete a mensagem! Pelo menos um Modelo e uma Palavra são necessários.');
-                return;
             }
+        });
 
-            let msg = t1.replace('****', w1);
+        // Este é o único lugar onde mensagens recebidas do servidor são exibidas!
+        socket.on('receber-mensagem', (data) => {
+            console.log('Mensagem recebida do servidor:', data.texto);
+            addMessageToChat(data.texto, false);
+        });
 
-            if (conj && t2 && w2) {
-                const secondPart = t2.replace('****', w2);
-                msg += ` ${conj} ${secondPart}`;
+        socket.on('connect_error', (error) => {
+            console.error('Erro de conexão:', error);
+            addSystemMessage('Falha ao conectar ao servidor.');
+            // Agenda uma nova tentativa mesmo em caso de erro inicial
+            if (!isTryingToReconnect) {
+                setTimeout(connectToServer, 3000);
             }
+        });
+    }
 
-            if (gesto) {
-                msg += ` ${gesto}`;
-            }
+    // Inicia a conexão quando a página carrega
+    window.addEventListener('load', connectToServer);
 
-            // Emite a mensagem apenas se estiver conectado
-            if (socket && socket.connected) {
-        socket.emit('enviar-mensagem', { texto: msg });
-        // REMOVA A LINHA addMessageToChat daqui!
-        // A mensagem será exibida quando o servidor a retransmitir
-        clearForm();
-            } else {
-                addSystemMessage('Erro: Não conectado ao servidor. Mensagem não enviada.');
-            }
+    // Controle de UI
+    const template1 = document.getElementById('template-1');
+    const word1 = document.getElementById('word-1');
+    const secondLine = document.getElementById('second-line');
+
+    function updateSecondLineVisibility() {
+        secondLine.style.display = (template1.value && word1.value) ? 'block' : 'none';
+    }
+    word1.addEventListener('change', updateSecondLineVisibility);
+    template1.addEventListener('change', updateSecondLineVisibility);
+
+    // Enviar Mensagem
+    document.getElementById('send-button').addEventListener('click', enviarMensagem);
+
+    function enviarMensagem() {
+        const t1 = template1.value;
+        const w1 = word1.value;
+        const conj = document.getElementById('conjunction').value;
+        const t2 = document.getElementById('template-2').value;
+        const w2 = document.getElementById('word-2').value;
+        const gesto = document.getElementById('gesture').value;
+
+        if (!t1 || !w1) {
+            alert('Precursor, complete a mensagem! Pelo menos um Modelo e uma Palavra são necessários.');
+            return;
         }
 
-        function clearForm() {
-            template1.selectedIndex = 0;
-            word1.selectedIndex = 0;
-            document.getElementById('conjunction').selectedIndex = 0;
-            document.getElementById('template-2').selectedIndex = 0;
-            document.getElementById('word-2').selectedIndex = 0;
-            document.getElementById('gesture').selectedIndex = 0;
-            secondLine.style.display = 'none';
+        let msg = t1.replace('****', w1);
+
+        if (conj && t2 && w2) {
+            const secondPart = t2.replace('****', w2);
+            msg += ` ${conj} ${secondPart}`;
         }
 
-        // Gerenciar Chat
-        function addMessageToChat(text, isSelf = false) {
-            const msgElement = document.createElement('div');
-            msgElement.classList.add('message');
-            if (isSelf) msgElement.classList.add('self');
-            msgElement.textContent = text;
-
-            const chatContainer = document.getElementById('chat-container');
-            chatContainer.appendChild(msgElement);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (gesto) {
+            msg += ` ${gesto}`;
         }
 
-        function addSystemMessage(text) {
-            const sysElement = document.createElement('div');
-            sysElement.classList.add('message', 'system-msg');
-            sysElement.textContent = text;
-
-            const chatContainer = document.getElementById('chat-container');
-            chatContainer.appendChild(sysElement);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        // Emite a mensagem apenas se estiver conectado
+        if (socket && socket.connected) {
+            socket.emit('enviar-mensagem', { texto: msg });
+            // NÃO chame addMessageToChat aqui! Deixe o servidor enviar de volta.
+            clearForm();
+        } else {
+            addSystemMessage('Erro: Não conectado ao servidor. Mensagem não enviada.');
         }
-    </script>
-</body>
+    }
 
-</html>
+    function clearForm() {
+        template1.selectedIndex = 0;
+        word1.selectedIndex = 0;
+        document.getElementById('conjunction').selectedIndex = 0;
+        document.getElementById('template-2').selectedIndex = 0;
+        document.getElementById('word-2').selectedIndex = 0;
+        document.getElementById('gesture').selectedIndex = 0;
+        secondLine.style.display = 'none';
+    }
 
+    // Gerenciar Chat
+    function addMessageToChat(text, isSelf = false) {
+        const msgElement = document.createElement('div');
+        msgElement.classList.add('message');
+        if (isSelf) msgElement.classList.add('self');
+        msgElement.textContent = text;
+
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.appendChild(msgElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addSystemMessage(text) {
+        const sysElement = document.createElement('div');
+        sysElement.classList.add('message', 'system-msg');
+        sysElement.textContent = text;
+
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.appendChild(sysElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+</script>
