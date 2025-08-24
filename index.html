@@ -253,9 +253,10 @@
 
             // Emite a mensagem apenas se estiver conectado
             if (socket && socket.connected) {
-                socket.emit('enviar-mensagem', { texto: msg });
-                addMessageToChat(msg, true); // Mostra a mensagem localmente
-                clearForm();
+        socket.emit('enviar-mensagem', { texto: msg });
+        // REMOVA A LINHA addMessageToChat daqui!
+        // A mensagem será exibida quando o servidor a retransmitir
+        clearForm();
             } else {
                 addSystemMessage('Erro: Não conectado ao servidor. Mensagem não enviada.');
             }
@@ -296,3 +297,4 @@
 </body>
 
 </html>
+
