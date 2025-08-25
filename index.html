@@ -92,16 +92,23 @@
         #connection-status {
             font-weight: bold;
         }
-        #clear-history-btn {
+        #clear-history-btn, #notif-btn {
             position: fixed;
-            bottom: 5rem;
-            right: 2rem;
             padding: 0.5rem;
-            background: #600;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+        }
+        #clear-history-btn {
+            bottom: 5rem;
+            right: 2rem;
+            background: #600;
+        }
+        #notif-btn {
+            bottom: 8rem;
+            right: 2rem;
+            background: #335;
         }
     </style>
 </head>
@@ -180,6 +187,7 @@
         </div>
         <button id="send-button">Deixar Mensagem</button>
         <button id="clear-history-btn">Limpar Histórico</button>
+        <button id="notif-btn">🔔 Notificações</button>
     </div>
 
 <script>
@@ -187,7 +195,7 @@
     const serverUrl = 'https://soulschat.onrender.com'; // SUA URL AQUI
     let socket = null;
     let isTryingToReconnect = false;
-    let lastMessageText = ''; // Controle de duplicatas
+    let lastMessageText = '';
     const statusElement = document.getElementById('connection-status');
 
     // FUNÇÕES DE ARMAZENAMENTO LOCAL
@@ -212,6 +220,32 @@
             const chatContainer = document.getElementById('chat-container');
             chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
             addSystemMessage('Histórico limpo.');
+        }
+    }
+
+    // FUNÇÃO DE NOTIFICAÇÕES
+    function mostrarNotificacao(mensagem) {
+        if (!('Notification' in window)) {
+            console.log('Este browser não suporta notificações');
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            const notificacao = new Notification('Message App - Nova Mensagem', {
+                body: mensagem,
+                icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23441201"/><text x="50" y="50" font-size="40" text-anchor="middle" fill="white">💬</text></svg>'
+            });
+
+            setTimeout(() => {
+                notificacao.close();
+            }, 5000);
+
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    mostrarNotificacao(mensagem);
+                }
+            });
         }
     }
 
@@ -249,6 +283,11 @@
         socket.on('receber-mensagem', (data) => {
             console.log('Mensagem recebida:', data.texto);
             addMessageToChat(data.texto, false);
+            
+            // MOSTRAR NOTIFICAÇÃO (apenas se a janela não estiver em foco)
+            if (document.hidden) {
+                mostrarNotificacao(data.texto);
+            }
         });
 
         socket.on('disconnect', (reason) => {
@@ -347,9 +386,29 @@
 
     // INICIALIZAÇÃO
     window.addEventListener('load', function() {
+        // Solicita permissão para notificações
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('Permissão para notificações concedida');
+                }
+            });
+        }
         connectToServer();
     });
+
+    // BOTÕES
     document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
+    
+    document.getElementById('notif-btn').addEventListener('click', () => {
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                alert('Permissão para notificações: ' + permission);
+            });
+        } else {
+            alert('Seu navegador não suporta notificações');
+        }
+    });
 </script>
 </body>
 </html>
