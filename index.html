@@ -343,18 +343,26 @@ window.addEventListener('load', function() {
     }
 
     // Gerenciar Chat
-    function addMessageToChat(text, isSelf = false) {
-        const msgElement = document.createElement('div');
-        msgElement.classList.add('message');
-        if (isSelf) msgElement.classList.add('self');
-        msgElement.textContent = text;
-
-        const chatContainer = document.getElementById('chat-container');
-        chatContainer.appendChild(msgElement);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        
-        saveChatHistory(); // SALVA O HISTÓRICO
+   function addMessageToChat(text, isSelf = false) {
+    // Verifica se a mensagem é IDÊNTICA à última adicionada
+    // Isso previne duplicatas vindas do servidor
+    if (text === lastMessageText) {
+        console.log('Mensagem duplicada ignorada:', text);
+        return; // Sai da função sem adicionar a mensagem
     }
+    lastMessageText = text; // Atualiza a última mensagem
+
+    const msgElement = document.createElement('div');
+    msgElement.classList.add('message');
+    if (isSelf) msgElement.classList.add('self');
+    msgElement.textContent = text;
+
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.appendChild(msgElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    saveChatHistory(); // SALVA O HISTÓRICO
+}
 
     function addSystemMessage(text) {
         const sysElement = document.createElement('div');
@@ -375,6 +383,7 @@ window.addEventListener('load', function() {
 </body>
 
 </html>
+
 
 
 
