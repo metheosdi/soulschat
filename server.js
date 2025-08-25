@@ -5,7 +5,6 @@ const socketIo = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// Configura o Socket.io para permitir conexões de qualquer lugar (CORS)
 const io = socketIo(server, {
   cors: {
     origin: "*",
@@ -13,52 +12,45 @@ const io = socketIo(server, {
   }
 });
 
-// ARMAZENAMENTO EM MEMÓRIA (simula um banco de dados simples)
-// As mensagens ficarão aqui enquanto o servidor estiver ligado
+// Armazenamento em memória
 let chatHistory = [];
 
-// Rota simples de saúde para testar se o backend está online
 app.get('/', (req, res) => {
   res.json({ 
-    message: '✅ Servidor do Chat Souls está online e saudável!',
+    message: '✅ Servidor do Chat Souls está online!',
     messageCount: chatHistory.length
   });
 });
 
-// Lógica principal de conexão e chat
+// Lógica principal
 io.on('connection', (socket) => {
   console.log('🔗 Um precursor se conectou: ' + socket.id);
 
-  // 1. ENVIA O HISTÓRICO COMPLETO APENAS para o cliente que acabou de conectar
-  // (Isso é uma sincronização inicial, só acontece uma vez por conexão)
+  // 1. ENVIA O HISTÓRICO COMPLETO apenas para o novo cliente
   socket.emit('historico-completo', chatHistory);
 
-  // 2. Ouvinte para mensagens recebidas de qualquer cliente
+  // 2. Ouvinte para mensagens recebidas
   socket.on('enviar-mensagem', (dados) => {
       console.log('📨 Mensagem recebida:', dados.texto);
       
       // Adiciona a nova mensagem ao histórico
       chatHistory.push(dados.texto);
       
-      // Opcional: Limitar o tamanho do histórico para não consumir muita memória
+      // Limita o histórico se necessário
       if (chatHistory.length > 100) {
-        chatHistory = chatHistory.slice(-50); // Mantém apenas as 50 últimas mensagens
+        chatHistory = chatHistory.slice(-50);
       }
 
-      // Repassa a NOVA MENSAGEM para TODOS os clientes conectados
-      // Isso NÃO inclui o histórico completo, apenas a mensagem nova
+      // Repassa apenas a NOVA mensagem para TODOS
       io.emit('receber-mensagem', { texto: dados.texto });
   });
 
   socket.on('disconnect', (reason) => {
-      console.log(`❌ Um precursor partiu (${socket.id}): ${reason}`);
+      console.log(`❌ Um precursor partiu: ${reason}`);
   });
 });
 
-// Usa a porta fornecida pelo Render ou a 3000 localmente
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Servidor ouvindo na porta ${PORT}`);
-  console.log(`💾 Histórico de mensagens inicializado.`);
 });
-
