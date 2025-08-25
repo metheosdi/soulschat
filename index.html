@@ -246,7 +246,26 @@
                 setTimeout(connectToServer, 3000);
             }
         });
+    // NOVO OUVINTE: Recebe o histórico completo do servidor
+socket.on('historico-completo', (historico) => {
+    console.log('📋 Histórico recebido do servidor:', historico);
+    // Limpa o chat local para evitar duplicatas
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
+    
+    // Adiciona cada mensagem do histórico ao chat
+    historico.forEach(msg => {
+        addMessageToChat(msg, false);
+    });
+    
+    addSystemMessage('Histórico de mensagens carregado.');
+});
 
+// Este é o único lugar onde mensagens recebidas do servidor são exibidas!
+socket.on('receber-mensagem', (data) => {
+    console.log('Mensagem recebida do servidor:', data.texto);
+    addMessageToChat(data.texto, false);
+});
         socket.on('receber-mensagem', (data) => {
             console.log('Mensagem recebida do servidor:', data.texto);
             addMessageToChat(data.texto, false);
@@ -261,11 +280,11 @@
         });
     }
 
-    // Inicia a conexão e carrega o histórico quando a página carrega
-    window.addEventListener('load', function() {
-        loadChatHistory();
-        connectToServer();
-    });
+// Inicia a conexão quando a página carrega
+window.addEventListener('load', function() {
+    // loadChatHistory(); // NÃO usa mais o histórico local
+    connectToServer();  // Conecta ao servidor que envia o histórico
+});
 
     // Controle de UI
     const template1 = document.getElementById('template-1');
@@ -356,6 +375,7 @@
 </body>
 
 </html>
+
 
 
 
