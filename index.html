@@ -181,29 +181,52 @@
     // ********************************************
     // CONFIGURAÇÃO IMPORTANTE: URL DO SEU BACKEND
     // ********************************************
-    const serverUrl = 'https://soulschat.onrender.com'; // Substitua pela sua URL real
+    const serverUrl = 'https://soulschat.onrender.com';
     // ********************************************
 
     let socket = null;
     let isTryingToReconnect = false;
     const statusElement = document.getElementById('connection-status');
 
+    // ================== FUNÇÕES DE ARMAZENAMENTO ==================
+    function saveChatHistory() {
+        const chatContainer = document.getElementById('chat-container');
+        const chatHTML = chatContainer.innerHTML;
+        localStorage.setItem('soulsChatHistory', chatHTML);
+    }
+
+    function loadChatHistory() {
+        const savedHistory = localStorage.getItem('soulsChatHistory');
+        if (savedHistory) {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.innerHTML = savedHistory;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+
+    function clearChatHistory() {
+        if (confirm('Deseja apagar todo o histórico de mensagens?')) {
+            localStorage.removeItem('soulsChatHistory');
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
+            addSystemMessage('Histórico limpo.');
+        }
+    }
+    // ================== FIM DAS FUNÇÕES DE ARMAZENAMENTO ==================
+
     function connectToServer() {
-        // Se já existe uma conexão, não cria outra
         if (socket?.connected) {
             console.log('Já conectado. Ignorando tentativa de reconexão.');
             return;
         }
 
-        // Se já existe um socket (mesmo desconectado), destrói a instância anterior para evitar lixo
         if (socket) {
-            socket.removeAllListeners(); // Remove todos os ouvintes de eventos antigos
-            socket.disconnect(); // Força a desconexão da instância anterior
+            socket.removeAllListeners();
+            socket.disconnect();
         }
 
         console.log('Tentando conectar ao servidor...');
         isTryingToReconnect = true;
-        // Tenta conectar ao servidor
         socket = io(serverUrl);
 
         socket.on('connect', () => {
@@ -219,15 +242,11 @@
             statusElement.textContent = '🔴 Desconectado';
             statusElement.style.color = 'lightpink';
             addSystemMessage('Você foi desconectado. Tentando reconectar...');
-
-            // Tentativa de reconexão automática após 3 segundos
-            // Usa uma flag para evitar múltiplas tentativas simultâneas
             if (!isTryingToReconnect) {
                 setTimeout(connectToServer, 3000);
             }
         });
 
-        // Este é o único lugar onde mensagens recebidas do servidor são exibidas!
         socket.on('receber-mensagem', (data) => {
             console.log('Mensagem recebida do servidor:', data.texto);
             addMessageToChat(data.texto, false);
@@ -236,18 +255,17 @@
         socket.on('connect_error', (error) => {
             console.error('Erro de conexão:', error);
             addSystemMessage('Falha ao conectar ao servidor.');
-            // Agenda uma nova tentativa mesmo em caso de erro inicial
             if (!isTryingToReconnect) {
                 setTimeout(connectToServer, 3000);
             }
         });
     }
 
-   // Inicia a conexão e carrega o histórico quando a página carrega
-window.addEventListener('load', function() {
-    loadChatHistory(); // CARREGA O HISTÓRICO PRIMEIRO
-    connectToServer();  // DEPOIS CONECTA AO SERVIDOR
-});
+    // Inicia a conexão e carrega o histórico quando a página carrega
+    window.addEventListener('load', function() {
+        loadChatHistory();
+        connectToServer();
+    });
 
     // Controle de UI
     const template1 = document.getElementById('template-1');
@@ -287,10 +305,8 @@ window.addEventListener('load', function() {
             msg += ` ${gesto}`;
         }
 
-        // Emite a mensagem apenas se estiver conectado
         if (socket && socket.connected) {
             socket.emit('enviar-mensagem', { texto: msg });
-            // NÃO chame addMessageToChat aqui! Deixe o servidor enviar de volta.
             clearForm();
         } else {
             addSystemMessage('Erro: Não conectado ao servidor. Mensagem não enviada.');
@@ -317,10 +333,10 @@ window.addEventListener('load', function() {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.appendChild(msgElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
-    }   
-    // SALVA O HISTÓRICO APÓS ADICIONAR UMA MENSAGEM DE SISTEMA
-    saveChatHistory();
-}
+        
+        saveChatHistory(); // SALVA O HISTÓRICO
+    }
+
     function addSystemMessage(text) {
         const sysElement = document.createElement('div');
         sysElement.classList.add('message', 'system-msg');
@@ -329,14 +345,18 @@ window.addEventListener('load', function() {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.appendChild(sysElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+        saveChatHistory(); // SALVA O HISTÓRICO
     }
+
     // Adiciona funcionalidade ao botão de limpar histórico
-document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
+    document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
 </script>
 
 </body>
 
 </html>
+
 
 
 
