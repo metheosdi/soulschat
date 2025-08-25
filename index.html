@@ -168,6 +168,14 @@
             </select>
         </div>
         <button id="send-button">Deixar Mensagem</button>
+        <button id="clear-history-btn" style="position: fixed; 
+                bottom: 5rem; right: 2rem; 
+                padding: 0.5rem; background: #600; 
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;">Limpar Histórico
+        </button>
     </div>
 <script>
     // ********************************************
@@ -235,8 +243,11 @@
         });
     }
 
-    // Inicia a conexão quando a página carrega
-    window.addEventListener('load', connectToServer);
+   // Inicia a conexão e carrega o histórico quando a página carrega
+window.addEventListener('load', function() {
+    loadChatHistory(); // CARREGA O HISTÓRICO PRIMEIRO
+    connectToServer();  // DEPOIS CONECTA AO SERVIDOR
+});
 
     // Controle de UI
     const template1 = document.getElementById('template-1');
@@ -248,7 +259,7 @@
     }
     word1.addEventListener('change', updateSecondLineVisibility);
     template1.addEventListener('change', updateSecondLineVisibility);
-
+    
     // Enviar Mensagem
     document.getElementById('send-button').addEventListener('click', enviarMensagem);
 
@@ -307,7 +318,19 @@
         chatContainer.appendChild(msgElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+    //salvar chat
+    function addSystemMessage(text) {
+    const sysElement = document.createElement('div');
+    sysElement.classList.add('message', 'system-msg');
+    sysElement.textContent = text;
 
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.appendChild(sysElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // SALVA O HISTÓRICO APÓS ADICIONAR UMA MENSAGEM DE SISTEMA
+    saveChatHistory();
+}
     function addSystemMessage(text) {
         const sysElement = document.createElement('div');
         sysElement.classList.add('message', 'system-msg');
@@ -317,9 +340,12 @@
         chatContainer.appendChild(sysElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+    // Adiciona funcionalidade ao botão de limpar histórico
+document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
 </script>
 
 </body>
 
 </html>
+
 
