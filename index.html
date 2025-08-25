@@ -317,17 +317,7 @@ window.addEventListener('load', function() {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.appendChild(msgElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-    //salvar chat
-    function addSystemMessage(text) {
-    const sysElement = document.createElement('div');
-    sysElement.classList.add('message', 'system-msg');
-    sysElement.textContent = text;
-
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.appendChild(sysElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    
+    }   
     // SALVA O HISTÓRICO APÓS ADICIONAR UMA MENSAGEM DE SISTEMA
     saveChatHistory();
 }
@@ -347,5 +337,6 @@ document.getElementById('clear-history-btn').addEventListener('click', clearChat
 </body>
 
 </html>
+
 
 
