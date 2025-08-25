@@ -29,7 +29,8 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   console.log('🔗 Um precursor se conectou: ' + socket.id);
 
-  // 1. ENVIA O HISTÓRICO COMPLETO para o cliente que acabou de conectar
+  // 1. ENVIA O HISTÓRICO COMPLETO APENAS para o cliente que acabou de conectar
+  // (Isso é uma sincronização inicial, só acontece uma vez por conexão)
   socket.emit('historico-completo', chatHistory);
 
   // 2. Ouvinte para mensagens recebidas de qualquer cliente
@@ -44,7 +45,8 @@ io.on('connection', (socket) => {
         chatHistory = chatHistory.slice(-50); // Mantém apenas as 50 últimas mensagens
       }
 
-      // Repassa a mensagem para TODOS os clientes conectados
+      // Repassa a NOVA MENSAGEM para TODOS os clientes conectados
+      // Isso NÃO inclui o histórico completo, apenas a mensagem nova
       io.emit('receber-mensagem', { texto: dados.texto });
   });
 
@@ -59,3 +61,4 @@ server.listen(PORT, () => {
   console.log(`✅ Servidor ouvindo na porta ${PORT}`);
   console.log(`💾 Histórico de mensagens inicializado.`);
 });
+
