@@ -92,6 +92,17 @@
         #connection-status {
             font-weight: bold;
         }
+        #clear-history-btn {
+            position: fixed;
+            bottom: 5rem;
+            right: 2rem;
+            padding: 0.5rem;
+            background: #600;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -168,27 +179,18 @@
             </select>
         </div>
         <button id="send-button">Deixar Mensagem</button>
-        <button id="clear-history-btn" style="position: fixed; 
-                bottom: 5rem; right: 2rem; 
-                padding: 0.5rem; background: #600; 
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;">Limpar Histórico
-        </button>
+        <button id="clear-history-btn">Limpar Histórico</button>
     </div>
-<script>
-    // ********************************************
-    // CONFIGURAÇÃO IMPORTANTE: URL DO SEU BACKEND
-    // ********************************************
-    const serverUrl = 'https://soulschat.onrender.com';
-    // ********************************************
 
+<script>
+    // CONFIGURAÇÃO
+    const serverUrl = 'https://soulschat.onrender.com'; // SUA URL AQUI
     let socket = null;
     let isTryingToReconnect = false;
+    let lastMessageText = ''; // Controle de duplicatas
     const statusElement = document.getElementById('connection-status');
 
-    // ================== FUNÇÕES DE ARMAZENAMENTO ==================
+    // FUNÇÕES DE ARMAZENAMENTO LOCAL
     function saveChatHistory() {
         const chatContainer = document.getElementById('chat-container');
         const chatHTML = chatContainer.innerHTML;
@@ -212,20 +214,16 @@
             addSystemMessage('Histórico limpo.');
         }
     }
-    // ================== FIM DAS FUNÇÕES DE ARMAZENAMENTO ==================
 
+    // CONEXÃO COM SERVIDOR
     function connectToServer() {
-        if (socket?.connected) {
-            console.log('Já conectado. Ignorando tentativa de reconexão.');
-            return;
-        }
-
+        if (socket?.connected) return;
         if (socket) {
             socket.removeAllListeners();
             socket.disconnect();
         }
 
-        console.log('Tentando conectar ao servidor...');
+        console.log('Tentando conectar...');
         isTryingToReconnect = true;
         socket = io(serverUrl);
 
@@ -237,56 +235,38 @@
             addSystemMessage('Você se conectou ao chat.');
         });
 
+        socket.on('historico-completo', (historico) => {
+            console.log('Histórico recebido:', historico);
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
+            
+            historico.forEach(msg => {
+                addMessageToChat(msg, false);
+            });
+            addSystemMessage('Histórico carregado.');
+        });
+
+        socket.on('receber-mensagem', (data) => {
+            console.log('Mensagem recebida:', data.texto);
+            addMessageToChat(data.texto, false);
+        });
+
         socket.on('disconnect', (reason) => {
             console.log('Desconectado:', reason);
             statusElement.textContent = '🔴 Desconectado';
             statusElement.style.color = 'lightpink';
-            addSystemMessage('Você foi desconectado. Tentando reconectar...');
-            if (!isTryingToReconnect) {
-                setTimeout(connectToServer, 3000);
-            }
-        });
-    // NOVO OUVINTE: Recebe o histórico completo do servidor
-socket.on('historico-completo', (historico) => {
-    console.log('📋 Histórico recebido do servidor:', historico);
-    // Limpa o chat local para evitar duplicatas
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
-    
-    // Adiciona cada mensagem do histórico ao chat
-    historico.forEach(msg => {
-        addMessageToChat(msg, false);
-    });
-    
-    addSystemMessage('Histórico de mensagens carregado.');
-});
-
-// Este é o único lugar onde mensagens recebidas do servidor são exibidas!
-socket.on('receber-mensagem', (data) => {
-    console.log('Mensagem recebida do servidor:', data.texto);
-    addMessageToChat(data.texto, false);
-});
-        socket.on('receber-mensagem', (data) => {
-            console.log('Mensagem recebida do servidor:', data.texto);
-            addMessageToChat(data.texto, false);
+            addSystemMessage('Desconectado. Reconectando...');
+            if (!isTryingToReconnect) setTimeout(connectToServer, 3000);
         });
 
         socket.on('connect_error', (error) => {
             console.error('Erro de conexão:', error);
-            addSystemMessage('Falha ao conectar ao servidor.');
-            if (!isTryingToReconnect) {
-                setTimeout(connectToServer, 3000);
-            }
+            addSystemMessage('Falha ao conectar.');
+            if (!isTryingToReconnect) setTimeout(connectToServer, 3000);
         });
     }
 
-// Inicia a conexão quando a página carrega
-window.addEventListener('load', function() {
-    // loadChatHistory(); // NÃO usa mais o histórico local
-    connectToServer();  // Conecta ao servidor que envia o histórico
-});
-
-    // Controle de UI
+    // CONTROLE DE UI
     const template1 = document.getElementById('template-1');
     const word1 = document.getElementById('word-1');
     const secondLine = document.getElementById('second-line');
@@ -297,7 +277,7 @@ window.addEventListener('load', function() {
     word1.addEventListener('change', updateSecondLineVisibility);
     template1.addEventListener('change', updateSecondLineVisibility);
     
-    // Enviar Mensagem
+    // ENVIO DE MENSAGENS
     document.getElementById('send-button').addEventListener('click', enviarMensagem);
 
     function enviarMensagem() {
@@ -309,26 +289,19 @@ window.addEventListener('load', function() {
         const gesto = document.getElementById('gesture').value;
 
         if (!t1 || !w1) {
-            alert('Precursor, complete a mensagem! Pelo menos um Modelo e uma Palavra são necessários.');
+            alert('Precursor, complete a mensagem!');
             return;
         }
 
         let msg = t1.replace('****', w1);
-
-        if (conj && t2 && w2) {
-            const secondPart = t2.replace('****', w2);
-            msg += ` ${conj} ${secondPart}`;
-        }
-
-        if (gesto) {
-            msg += ` ${gesto}`;
-        }
+        if (conj && t2 && w2) msg += ` ${conj} ${t2.replace('****', w2)}`;
+        if (gesto) msg += ` ${gesto}`;
 
         if (socket && socket.connected) {
             socket.emit('enviar-mensagem', { texto: msg });
             clearForm();
         } else {
-            addSystemMessage('Erro: Não conectado ao servidor. Mensagem não enviada.');
+            addSystemMessage('Erro: Não conectado.');
         }
     }
 
@@ -342,27 +315,24 @@ window.addEventListener('load', function() {
         secondLine.style.display = 'none';
     }
 
-    // Gerenciar Chat
-   function addMessageToChat(text, isSelf = false) {
-    // Verifica se a mensagem é IDÊNTICA à última adicionada
-    // Isso previne duplicatas vindas do servidor
-    if (text === lastMessageText) {
-        console.log('Mensagem duplicada ignorada:', text);
-        return; // Sai da função sem adicionar a mensagem
+    // GERENCIAMENTO DE CHAT
+    function addMessageToChat(text, isSelf = false) {
+        if (text === lastMessageText) {
+            console.log('Mensagem duplicada ignorada:', text);
+            return;
+        }
+        lastMessageText = text;
+
+        const msgElement = document.createElement('div');
+        msgElement.classList.add('message');
+        if (isSelf) msgElement.classList.add('self');
+        msgElement.textContent = text;
+
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.appendChild(msgElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        saveChatHistory();
     }
-    lastMessageText = text; // Atualiza a última mensagem
-
-    const msgElement = document.createElement('div');
-    msgElement.classList.add('message');
-    if (isSelf) msgElement.classList.add('self');
-    msgElement.textContent = text;
-
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.appendChild(msgElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    
-    saveChatHistory(); // SALVA O HISTÓRICO
-}
 
     function addSystemMessage(text) {
         const sysElement = document.createElement('div');
@@ -372,20 +342,14 @@ window.addEventListener('load', function() {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.appendChild(sysElement);
         chatContainer.scrollTop = chatContainer.scrollHeight;
-        
-        saveChatHistory(); // SALVA O HISTÓRICO
+        saveChatHistory();
     }
 
-    // Adiciona funcionalidade ao botão de limpar histórico
+    // INICIALIZAÇÃO
+    window.addEventListener('load', function() {
+        connectToServer();
+    });
     document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
 </script>
-
 </body>
-
 </html>
-
-
-
-
-
-
