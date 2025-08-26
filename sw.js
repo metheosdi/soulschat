@@ -1,14 +1,24 @@
-// Service Worker SUPER SIMPLES - apenas para instalação PWA
+// sw.js - Service Worker APENAS para limpar cache
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  console.log('✅ SW instalado (modo minimalista)');
+    console.log('🔥 SW instalado - limpando caches');
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    console.log('🗑️ Removendo cache:', cacheName);
+                    return caches.delete(cacheName);
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
-// NÃO intercepta nenhuma requisição - deixa tudo passar
+// 🔥 IMPORTANTE: NÃO intercepta NENHUMA requisição
 self.addEventListener('fetch', (event) => {
-  return fetch(event.request);
+    // Deixa TUDO passar direto - não mexe em nada
+    return fetch(event.request);
 });
