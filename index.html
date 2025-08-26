@@ -297,7 +297,38 @@
 
 <script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=2"></script>
 <script>
-// CONFIGURAÇÃO
+// ================== ANTI-CACHE AUTOMÁTICO ==================
+console.log('🔄 Anti-cache ativado', new Date().toLocaleTimeString());
+
+// Força recarregamento se a página estiver em cache
+if (performance.navigation.type === 2) {
+    // Página foi carregada via cache de voltar/avançar
+    console.log('🔄 Página carregada do cache - recarregando...');
+    window.location.reload(true);
+}
+
+// Verifica se é uma versão antiga em cache
+const currentVersion = 'v2.1';
+const storedVersion = localStorage.getItem('app_version');
+
+if (storedVersion !== currentVersion) {
+    console.log('🔄 Nova versão detectada - limpando cache...');
+    localStorage.setItem('app_version', currentVersion);
+    
+    // Limpa caches específicos
+    localStorage.removeItem('soulsChatHistory');
+    sessionStorage.clear();
+    
+    // Força recarregamento
+    window.location.reload(true);
+}
+
+// Previne cache do navegador
+window.addEventListener('beforeunload', function() {
+    console.log('🔄 Prevenindo cache...');
+});
+
+// ================== CONEXÃO SOCKET ==================
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
 let reconnectTimeout = null;
@@ -305,9 +336,16 @@ const statusElement = document.getElementById('connection-status');
 let lastMessageText = '';
 let connectionAttempts = 0;
 
-// FUNÇÃO DE CONEXÃO MELHORADA
+// FUNÇÃO DE CONEXÃO COM VERIFICAÇÃO DE CACHE
 function connectToServer() {
-    console.log('🔗 Tentando conectar...', new Date().toLocaleTimeString());
+    console.log('🔗 Tentativa de conexão', connectionAttempts + 1, new Date().toLocaleTimeString());
+    
+    // Verifica se o Socket.IO carregou corretamente
+    if (typeof io === 'undefined') {
+        console.error('❌ Socket.IO não carregado - recarregando página...');
+        setTimeout(() => window.location.reload(true), 2000);
+        return;
+    }
     
     // Limpa tentativa anterior
     if (reconnectTimeout) {
@@ -329,15 +367,17 @@ function connectToServer() {
     connectionAttempts++;
 
     try {
+        // Conexão SIMPLES sem muitas opções
         socket = io(serverUrl, {
             transports: ['polling', 'websocket'],
-            timeout: 8000,
-            reconnection: false
+            timeout: 5000,
+            reconnection: false,
+            forceNew: true
         });
 
         // EVENTOS
         socket.on('connect', () => {
-            console.log('✅ Conectado!');
+            console.log('✅ Conectado! Sessão:', socket.id);
             connectionAttempts = 0;
             statusElement.textContent = '🟢 Conectado';
             statusElement.style.color = 'lightgreen';
@@ -374,7 +414,7 @@ function connectToServer() {
                 console.log('⏰ Timeout de conexão');
                 handleConnectionError(new Error('Timeout'));
             }
-        }, 10000);
+        }, 8000);
 
     } catch (error) {
         console.error('❌ Erro ao criar socket:', error);
@@ -386,7 +426,7 @@ function handleDisconnection(reason) {
     statusElement.textContent = '🔴 Desconectado';
     statusElement.style.color = 'lightpink';
     
-    const delay = Math.min(connectionAttempts * 2000, 10000); // Backoff
+    const delay = Math.min(connectionAttempts * 1000, 5000);
     console.log(`⏳ Reconectando em ${delay/1000}s...`);
     
     reconnectTimeout = setTimeout(connectToServer, delay);
@@ -396,200 +436,63 @@ function handleConnectionError(error) {
     statusElement.textContent = '🔴 Erro de conexão';
     statusElement.style.color = 'orange';
     
-    const delay = Math.min(connectionAttempts * 3000, 15000);
+    // Se muitas tentativas falharem, sugere recarregar
+    if (connectionAttempts >= 3) {
+        statusElement.textContent = '⚡ Recarregue a página';
+        statusElement.style.color = 'red';
+        addSystemMessage('Problema de conexão. Tente recarregar a página (Ctrl+F5).');
+        return;
+    }
+    
+    const delay = Math.min(connectionAttempts * 2000, 8000);
     console.log(`⏳ Nova tentativa em ${delay/1000}s...`);
     
     reconnectTimeout = setTimeout(connectToServer, delay);
 }
 
-// ... (AS OUTRAS FUNÇÕES PERMANECEM EXATAMENTE IGUAIS) ...
+// ... (O RESTANTE DO SEU CÓDIGO PERMANECE IGUAL) ...
 
-// FUNÇÃO PARA PREENCHER DROPDOWNS COM PALAVRAS
-function preencherDropdownPalavras(dropdownId) {
-    const dropdown = document.getElementById(dropdownId);
-    
-    while (dropdown.options.length > 1) {
-        dropdown.remove(1);
-    }
-    
-    const palavras = {
-        "Inimigos": ["Inimigo", "Inimigo Fraco", "Inimigo Forte", "Monstro", "dragão", "Chefe", "Sentinela", "Grupo", "Bando", "Chamariz", "Morto-Vivo", "soldado", "cavaleiro", "Cavalheiro", "Arqueiro", "Atirador", "Mago", "artilharia", "monarca", "demi-humano", "estrangeiro", "gigante", "cavalo", "cachorro", "lobo", "rato", "fera", "pássaro", "ave de rapina", "cobra", "carangueijo", "camarão", "polvo", "inseto", "escaravelho", "lesma", "aparição", "esqueleto", "monstruosidade", "criatura agourenta"],
-        "Pessoas": ["Maculado", "guerreiro", "espadachim", "cavaleiro", "Samurai", "feiticeiro", "clérigo", "sábio", "professor", "mestre", "amigo", "amante", "velho querido", "velho maluco", "anjo", "Bolsa de moedas cheia", "pobre", "boa pessoa", "pessoa perversa", "pessoa gorda", "pessoa magra", "pessoa adorável", "pessoa patética", "pessoa estranha", "pessoa agil", "pessoa lenta", "pessoa invisivel", "pessoa gigante", "pescador", "ladrão", "mentiroso", "covarde", "traidor", "par", "trio", "nobre", "aristocrata", "herói", "campeão", "monarca", "senhor", "deus"],
-        "Coisas": ["item", "item necesário", "item precioso", "algo", "algo incrível", "Tesouro", "cadaver", "caixão", "armadilha", "escudo", "arco", "arma de projétil", "armadura", "talismã", "habilidade", "feitiçaria", "encantamento", "mapa", "material", "flor", "grama", "árvore", "fruta", "semente", "cogumelo", "lágrima", "cristal", "borboleta", "inseto", "estrume", "graça", "porta", "chave", "escada", "alavanca", "elevador", "Nascente de espírito", "portão de envio", "astrolábio de pedra", "telescopio", "mensagem", "mancha", "Térvore", "Elden Ring"],
-        "Tática de Batalha": ["desespero", "Batalha Corpo a Corpo", "Batalha à distancia", "Batalha a cavalo", "atrair", "Dorrotar um por um", "Derrotando todos de uma vez", "correndo", "furtividade", "mimetismo", "confusão", "perseguição", "fugindo", "Invocação", "circulando", "pulando", "breve pausa"],
-        "Ações": ["Atacando", "ataque com salto", "ataque com corrida", "acerto critico", "segurar com as duas mãos", "bloqueio", "aparando", "contra-ataque", "feitiçaria", "encantamento", "habilidade", "invocação", "arremessando", "curando", "correndo", "rolando", "retrocedendo", "pulando", "agachado", "travar a mira", "criação de itens", "gesticulando"],
-        "Situações": ["Manhã", "Meio-dia", "Noite", "ceu claro", "nublado", "chuva", "tempestade", "névoa", "neve", "Patrulhando", "procissão", "multidão", "Ataque surpresa", "emboscada", "cercado", "reduzido a pó", "batalha", "Reforços", "Ritual", "explosão", "local alto", "local defensável", "local escalável", "local brilhante", "local escura", "área aberta", "área apertada", "esconderijo", "local de atirar", "local de reconhecimento", "segurança", "perigo", "vista deslumbrante", "desvio", "caminho oculto", "Passagem secreta", "atalho", "impasse", "desviando o olhar", "despercebido", "sem vigor"],
-        "Trajeto": ["Leste", "Oeste", "Sul", "Norte", "adiante", "atrás", "Esquerda", "Direita", "centro", "em cima", "abaixo", "borda"],
-        "Partes do corpo": ["cabeça", "estômago", "Costas", "braços", "perna", "garupa", "cauda", "núcleo", "Dedos"],
-        "Afinidades": ["físico", "padrão", "contundente", "Cortar", "penetrante", "Fogo", "relâmpago", "magia", "santo", "veneno", "tóxico", "podridão escarlate", "perda de sangue", "geada", "dormir", "loucura", "morte"],
-        "Conceitos": ["vida", "Morte", "luz", "escuro", "Estrelas", "Fogo", "Ordem", "caos", "alegria", "ira", "sofrimento", "tristeza", "confortar", "bem-aventurança", "infortúnio", "boa sorte", "azar", "esperança", "desespero", "vitória", "derrota", "investigação", "fé", "abundância", "podridão", "lealdade", "injustiça", "segredo", "oportunidade", "apuro", "pista", "amizade", "amor", "valentia", "vigor", "firmeza", "confiança", "distraído", "Desprotegido", "introspecção", "lamentar", "arrependimento", "futilidade", "à beira do abismo", "traição", "vingança", "destruição", "imprudência", "calma", "vigilância", "tranquilidade", "som", "lágrimas", "dormir", "profundezidade", "escória", "medo", "sacrifício", "ruína"],
-        "Frases": ["Boa sorte", "Olhe com atenção", "Ouça com atenção", "Pense com cuidado", "Muito bem", "Eu fiz isso!", "Eu falhei...", "aqui!", "Aqui não!", "Não se atreva!", "Faça isso!", "Eu não aguento isso...", "não pense", "tão solitário...", "aqui de novo...", "apenas começando", "Mantenha a calma", "continue se movendo", "voltar", "desistir", "Não desista", "Me ajuda...", "Eu não acredito...", "muito alto", "Eu quero ir para casa...", "é como a sonho...", "parece familiar ...", "bonito...", "você não tem o direito", "Está pronto?"]
-    };
-    
-    for (const [categoria, palavrasArray] of Object.entries(palavras)) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = categoria;
-        
-        palavrasArray.forEach(palavra => {
-            const option = document.createElement('option');
-            option.value = palavra;
-            option.textContent = palavra;
-            optgroup.appendChild(option);
-        });
-        
-        dropdown.appendChild(optgroup);
-    }
-}
-
-// FUNÇÕES DE ARMAZENAMENTO LOCAL
-function saveChatHistory() {
-    const chatContainer = document.getElementById('chat-container');
-    const chatHTML = chatContainer.innerHTML;
-    localStorage.setItem('soulsChatHistory', chatHTML);
-}
-
-function loadChatHistory() {
-    const savedHistory = localStorage.getItem('soulsChatHistory');
-    if (savedHistory) {
-        const chatContainer = document.getElementById('chat-container');
-        chatContainer.innerHTML = savedHistory;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-}
-
-function clearChatHistory() {
-    if (confirm('Deseja apagar todo o histórico de mensagens?')) {
-        localStorage.removeItem('soulsChatHistory');
-        const chatContainer = document.getElementById('chat-container');
-        chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
-        addSystemMessage('Histórico limpo.');
-    }
-}
-
-// CONTROLE DE UI
-const template1 = document.getElementById('template-1');
-const word1 = document.getElementById('word-1');
-const secondLine = document.getElementById('second-line');
-
-function updateSecondLineVisibility() {
-    secondLine.style.display = (template1.value && word1.value) ? 'block' : 'none';
-}
-word1.addEventListener('change', updateSecondLineVisibility);
-template1.addEventListener('change', updateSecondLineVisibility);
-
-// ENVIO DE MENSAGENS
-document.getElementById('send-button').addEventListener('click', enviarMensagem);
-
-function enviarMensagem() {
-    const t1 = template1.value;
-    const w1 = word1.value;
-    const conj = document.getElementById('conjunction').value;
-    const t2 = document.getElementById('template-2').value;
-    const w2 = document.getElementById('word-2').value;
-    const gesto = document.getElementById('gesture').value;
-
-    if (!t1 || !w1) {
-        alert('Precursor, complete a mensagem!');
-        return;
-    }
-
-    let msg = t1.replace('****', w1);
-    if (conj && t2 && w2) msg += ` ${conj} ${t2.replace('****', w2)}`;
-    if (gesto) msg += ` ${gesto}`;
-
-    if (socket && socket.connected) {
-        socket.emit('enviar-mensagem', { texto: msg });
-        addMessageToChat(msg, true);
-        clearForm();
-    } else {
-        addSystemMessage('Erro: Não conectado. Tente novamente.');
-        addMessageToChat(msg, true);
-        clearForm();
-    }
-}
-
-function clearForm() {
-    template1.selectedIndex = 0;
-    word1.selectedIndex = 0;
-    document.getElementById('conjunction').selectedIndex = 0;
-    document.getElementById('template-2').selectedIndex = 0;
-    document.getElementById('word-2').selectedIndex = 0;
-    document.getElementById('gesture').selectedIndex = 0;
-    secondLine.style.display = 'none';
-}
-
-// GERENCIAMENTO DE CHAT
-function addMessageToChat(text, isSelf = false) {
-    if (text === lastMessageText) return;
-    lastMessageText = text;
-
-    const msgElement = document.createElement('div');
-    msgElement.classList.add('message');
-    if (isSelf) msgElement.classList.add('self');
-    msgElement.textContent = text;
-
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.appendChild(msgElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    saveChatHistory();
-}
-
-function addSystemMessage(text) {
-    const sysElement = document.createElement('div');
-    sysElement.classList.add('message', 'system-msg');
-    sysElement.textContent = text;
-
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.appendChild(sysElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    saveChatHistory();
-}
-
-// INICIALIZAÇÃO
+// MODIFIQUE A INICIALIZAÇÃO PARA ISSO:
 window.addEventListener('load', function() {
-    console.log('🚀 Iniciando aplicação...');
-    preencherDropdownPalavras('word-1');
-    preencherDropdownPalavras('word-2');
-    loadChatHistory();
+    console.log('🚀 Iniciando aplicação...', new Date().toLocaleTimeString());
     
-    // Pequeno delay para garantir que tudo carregou
-    setTimeout(connectToServer, 1000);
+    // Pequeno delay para garantir tudo carregou
+    setTimeout(() => {
+        preencherDropdownPalavras('word-1');
+        preencherDropdownPalavras('word-2');
+        loadChatHistory();
+        connectToServer();
+    }, 500);
 });
 
-// BOTÕES
-document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
-
-document.getElementById('notif-btn').addEventListener('click', () => {
-    alert('Funcionalidade de notificações');
-});
-
-// BOTÃO DE RECONEXÃO MANUAL
-const reconnectBtn = document.createElement('button');
-reconnectBtn.textContent = '↻ Reconectar';
-reconnectBtn.id = 'reconnect-btn';
-reconnectBtn.style.cssText = `
+// ADICIONE ESTE BOTÃO DE RECARREGAMENTO
+const reloadBtn = document.createElement('button');
+reloadBtn.textContent = '🔄 Recarregar';
+reloadBtn.id = 'reload-btn';
+reloadBtn.style.cssText = `
     position: fixed;
-    bottom: 11rem;
+    bottom: 14rem;
     right: 2rem;
-    background: #353;
+    background: #553;
     color: white;
     border: none;
     padding: 0.5rem;
     border-radius: 4px;
     cursor: pointer;
     z-index: 1000;
+    font-size: 12px;
 `;
 
-document.body.appendChild(reconnectBtn);
-
-reconnectBtn.addEventListener('click', () => {
-    console.log('🔄 Reconexão manual solicitada');
-    connectionAttempts = 0;
-    connectToServer();
+reloadBtn.addEventListener('click', () => {
+    console.log('🔄 Recarregamento manual');
+    window.location.reload(true);
 });
+
+document.body.appendChild(reloadBtn);
 </script>
 </body>
 </html>
+
 
 
 
