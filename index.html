@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Souls</title>
-   <!-- <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script> -->
+   <!-- Mude para isso -->
+<script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=2"></script>
     <!-- Manifest PWA -->
 <!--<link rel="manifest" href="/manifest.json">-->
 
@@ -20,6 +24,7 @@
 <!-- Meta tags para melhor experiência mobile -->
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
+    
     <style>
         :root {
             --color-bg: #222;
@@ -299,72 +304,114 @@
         <button id="notif-btn">🔔 Notificações</button>
     </div>
 
-<script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+<script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=2"></script>
 <script>
 // CONFIGURAÇÃO
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
+let reconnectTimeout = null;
 const statusElement = document.getElementById('connection-status');
 let lastMessageText = '';
+let connectionAttempts = 0;
 
-// FUNÇÃO DE CONEXÃO SIMPLIFICADA
+// FUNÇÃO DE CONEXÃO MELHORADA
 function connectToServer() {
-    console.log('🔗 Tentando conectar...');
+    console.log('🔗 Tentando conectar...', new Date().toLocaleTimeString());
     
-    // Fecha conexão anterior se existir
+    // Limpa tentativa anterior
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+    
     if (socket) {
-        socket.disconnect();
-        socket.removeAllListeners();
+        try {
+            socket.disconnect();
+            socket.removeAllListeners();
+        } catch (e) {
+            console.log('Socket já fechado');
+        }
     }
 
     statusElement.textContent = '🟡 Conectando...';
     statusElement.style.color = 'yellow';
+    connectionAttempts++;
 
-    // Conexão SIMPLES sem opções complexas
-    socket = io(serverUrl, {
-        transports: ['polling', 'websocket'],
-        timeout: 10000
-    });
+    try {
+        socket = io(serverUrl, {
+            transports: ['polling', 'websocket'],
+            timeout: 8000,
+            reconnection: false
+        });
 
-    // EVENTOS BÁSICOS
-    socket.on('connect', () => {
-        console.log('✅ Conectado!');
-        statusElement.textContent = '🟢 Conectado';
-        statusElement.style.color = 'lightgreen';
-        addSystemMessage('Conectado ao servidor.');
-    });
+        // EVENTOS
+        socket.on('connect', () => {
+            console.log('✅ Conectado!');
+            connectionAttempts = 0;
+            statusElement.textContent = '🟢 Conectado';
+            statusElement.style.color = 'lightgreen';
+            addSystemMessage('Conectado ao servidor.');
+        });
 
-    socket.on('historico-completo', (historico) => {
-        console.log('📋 Histórico recebido:', historico.length, 'mensagens');
-        if (historico.length > 0) {
-            historico.forEach(msg => {
-                addMessageToChat(msg, false);
-            });
-            addSystemMessage('Histórico carregado.');
-        }
-    });
+        socket.on('historico-completo', (historico) => {
+            console.log('📋 Histórico recebido:', historico.length, 'mensagens');
+            if (historico.length > 0) {
+                historico.forEach(msg => {
+                    addMessageToChat(msg, false);
+                });
+            }
+        });
 
-    socket.on('receber-mensagem', (data) => {
-        console.log('📨 Mensagem recebida:', data.texto);
-        addMessageToChat(data.texto, false);
-    });
+        socket.on('receber-mensagem', (data) => {
+            console.log('📨 Mensagem recebida:', data.texto);
+            addMessageToChat(data.texto, false);
+        });
 
-    socket.on('disconnect', (reason) => {
-        console.log('❌ Desconectado:', reason);
-        statusElement.textContent = '🔴 Desconectado';
-        statusElement.style.color = 'lightpink';
-        addSystemMessage('Desconectado. Tentando reconectar em 5s...');
-        setTimeout(connectToServer, 5000);
-    });
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Desconectado:', reason);
+            handleDisconnection(reason);
+        });
 
-    socket.on('connect_error', (error) => {
-        console.error('❌ Erro de conexão:', error.message);
-        statusElement.textContent = '🔴 Erro de conexão';
-        statusElement.style.color = 'orange';
-        addSystemMessage('Erro ao conectar. Tentando novamente em 10s...');
-        setTimeout(connectToServer, 10000);
-    });
+        socket.on('connect_error', (error) => {
+            console.error('❌ Erro de conexão:', error.message);
+            handleConnectionError(error);
+        });
+
+        // Timeout de segurança
+        setTimeout(() => {
+            if (socket && !socket.connected) {
+                console.log('⏰ Timeout de conexão');
+                handleConnectionError(new Error('Timeout'));
+            }
+        }, 10000);
+
+    } catch (error) {
+        console.error('❌ Erro ao criar socket:', error);
+        handleConnectionError(error);
+    }
 }
+
+function handleDisconnection(reason) {
+    statusElement.textContent = '🔴 Desconectado';
+    statusElement.style.color = 'lightpink';
+    
+    const delay = Math.min(connectionAttempts * 2000, 10000); // Backoff
+    console.log(`⏳ Reconectando em ${delay/1000}s...`);
+    
+    reconnectTimeout = setTimeout(connectToServer, delay);
+}
+
+function handleConnectionError(error) {
+    statusElement.textContent = '🔴 Erro de conexão';
+    statusElement.style.color = 'orange';
+    
+    const delay = Math.min(connectionAttempts * 3000, 15000);
+    console.log(`⏳ Nova tentativa em ${delay/1000}s...`);
+    
+    reconnectTimeout = setTimeout(connectToServer, delay);
+}
+
+// ... (AS OUTRAS FUNÇÕES PERMANECEM EXATAMENTE IGUAIS) ...
 
 // FUNÇÃO PARA PREENCHER DROPDOWNS COM PALAVRAS
 function preencherDropdownPalavras(dropdownId) {
@@ -385,7 +432,7 @@ function preencherDropdownPalavras(dropdownId) {
         "Partes do corpo": ["cabeça", "estômago", "Costas", "braços", "perna", "garupa", "cauda", "núcleo", "Dedos"],
         "Afinidades": ["físico", "padrão", "contundente", "Cortar", "penetrante", "Fogo", "relâmpago", "magia", "santo", "veneno", "tóxico", "podridão escarlate", "perda de sangue", "geada", "dormir", "loucura", "morte"],
         "Conceitos": ["vida", "Morte", "luz", "escuro", "Estrelas", "Fogo", "Ordem", "caos", "alegria", "ira", "sofrimento", "tristeza", "confortar", "bem-aventurança", "infortúnio", "boa sorte", "azar", "esperança", "desespero", "vitória", "derrota", "investigação", "fé", "abundância", "podridão", "lealdade", "injustiça", "segredo", "oportunidade", "apuro", "pista", "amizade", "amor", "valentia", "vigor", "firmeza", "confiança", "distraído", "Desprotegido", "introspecção", "lamentar", "arrependimento", "futilidade", "à beira do abismo", "traição", "vingança", "destruição", "imprudência", "calma", "vigilância", "tranquilidade", "som", "lágrimas", "dormir", "profundezidade", "escória", "medo", "sacrifício", "ruína"],
-        "Frases": ["Boa sorte", "Olhe com atenção", "Ouça com atenção", "Pense com cuidado", "Muito bem", "Eu fiz isso!", "Eu falhei...", "aqui!", "Aqui não!", "Não se atreva!", "Faça isso!", "Eu não aguento isso...", "não pense", "tão solitário...", "aqui de novo...", "apenas começando", "Mantenha a calma", "continue se movendo", "voltar", "desistir", "Não desista", "Me ajuda...", "Eu não acredito...", "muito alto", "Eu quero ir para casa...", "é como um sonho...", "parece familiar ...", "bonito...", "você não tem o direito", "Está pronto?"]
+        "Frases": ["Boa sorte", "Olhe com atenção", "Ouça com atenção", "Pense com cuidado", "Muito bem", "Eu fiz isso!", "Eu falhei...", "aqui!", "Aqui não!", "Não se atreva!", "Faça isso!", "Eu não aguento isso...", "não pense", "tão solitário...", "aqui de novo...", "apenas começando", "Mantenha a calma", "continue se movendo", "voltar", "desistir", "Não desista", "Me ajuda...", "Eu não acredito...", "muito alto", "Eu quero ir para casa...", "é como a sonho...", "parece familiar ...", "bonito...", "você não tem o direito", "Está pronto?"]
     };
     
     for (const [categoria, palavrasArray] of Object.entries(palavras)) {
@@ -509,10 +556,13 @@ function addSystemMessage(text) {
 
 // INICIALIZAÇÃO
 window.addEventListener('load', function() {
+    console.log('🚀 Iniciando aplicação...');
     preencherDropdownPalavras('word-1');
     preencherDropdownPalavras('word-2');
     loadChatHistory();
-    connectToServer(); // Conecta imediatamente
+    
+    // Pequeno delay para garantir que tudo carregou
+    setTimeout(connectToServer, 1000);
 });
 
 // BOTÕES
@@ -521,9 +571,35 @@ document.getElementById('clear-history-btn').addEventListener('click', clearChat
 document.getElementById('notif-btn').addEventListener('click', () => {
     alert('Funcionalidade de notificações');
 });
+
+// BOTÃO DE RECONEXÃO MANUAL
+const reconnectBtn = document.createElement('button');
+reconnectBtn.textContent = '↻ Reconectar';
+reconnectBtn.id = 'reconnect-btn';
+reconnectBtn.style.cssText = `
+    position: fixed;
+    bottom: 11rem;
+    right: 2rem;
+    background: #353;
+    color: white;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 1000;
+`;
+
+document.body.appendChild(reconnectBtn);
+
+reconnectBtn.addEventListener('click', () => {
+    console.log('🔄 Reconexão manual solicitada');
+    connectionAttempts = 0;
+    connectToServer();
+});
 </script>
 </body>
 </html>
+
 
 
 
