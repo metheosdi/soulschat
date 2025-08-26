@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.2",
+    "lowdb": "^5.1.0"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -24,3 +25,4 @@
   "author": "Seu Nome",
   "license": "MIT"
 }
+
