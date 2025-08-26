@@ -41,7 +41,9 @@ function loadHistory() {
 // Função para salvar o histórico no arquivo
 function saveHistory(history) {
   try {
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+    // Garante que estamos salvando apenas strings (texto das mensagens)
+    const historicoParaSalvar = history.map(msg => typeof msg === 'object' ? msg.text : msg);
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(historicoParaSalvar, null, 2));
     console.log('Histórico salvo no arquivo');
   } catch (error) {
     console.error('Erro ao salvar histórico:', error);
@@ -61,21 +63,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Rota para visualizar o histórico completo
-app.get('/history', (req, res) => {
-  res.json({
-    count: chatHistory.length,
-    messages: chatHistory
-  });
-});
-
-// Rota para limpar o histórico (apenas para administração)
-app.delete('/history', (req, res) => {
-  chatHistory = [];
-  saveHistory(chatHistory);
-  res.json({ message: 'Histórico limpo com sucesso', count: 0 });
-});
-
 // Lógica principal de conexão e chat
 io.on('connection', (socket) => {
   console.log('🔗 Um precursor se conectou: ' + socket.id);
@@ -93,12 +80,8 @@ io.on('connection', (socket) => {
     const mensagem = dados.texto.trim();
     console.log(`📨 Mensagem de ${socket.id}: ${mensagem}`);
     
-    // Adiciona a nova mensagem ao histórico
-    chatHistory.push({
-      text: mensagem,
-      timestamp: new Date().toISOString(),
-      id: Date.now() + Math.random().toString(36).substr(2, 9)
-    });
+    // Adiciona a nova mensagem ao histórico (apenas o texto)
+    chatHistory.push(mensagem);
     
     // Limita o tamanho do histórico
     if (chatHistory.length > MAX_HISTORY_LENGTH) {
@@ -110,8 +93,7 @@ io.on('connection', (socket) => {
 
     // Repassa a mensagem para TODOS os clientes conectados
     io.emit('receber-mensagem', { 
-      texto: mensagem,
-      timestamp: new Date().toISOString()
+      texto: mensagem
     });
   });
 
@@ -131,4 +113,3 @@ process.on('SIGINT', () => {
   saveHistory(chatHistory);
   process.exit(0);
 });
-
