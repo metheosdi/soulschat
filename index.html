@@ -490,8 +490,15 @@ reloadBtn.addEventListener('click', () => {
 
 document.body.appendChild(reloadBtn);
 </script>
+    <script>
+// Registra Service Worker para limpar cache
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw-cache.js', { scope: '/' });
+}
+</script>
 </body>
 </html>
+
 
 
 
