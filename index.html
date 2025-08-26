@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
+     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- PWA METADADOS -->
+    <meta name="theme-color" content="#753">
+    <link rel="manifest" href="/manifest.json">
+    
     <title>Chat Souls</title>
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <style>
@@ -640,6 +645,67 @@ document.getElementById('notif-btn').addEventListener('click', () => {
         alert('Seu navegador não suporta notificações');
     }
 });
+    // ================== PWA SIMPLIFICADO ==================
+let deferredPrompt;
+
+// Botão de instalação
+const installButton = document.createElement('button');
+installButton.textContent = '📱 Instalar App';
+installButton.style.cssText = `
+    position: fixed;
+    bottom: 14rem;
+    right: 2rem;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1000;
+    display: none;
+    font-size: 12px;
+`;
+document.body.appendChild(installButton);
+
+// Evento de antes de instalar
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installButton.style.display = 'block';
+    
+    // Esconde automaticamente após 10 segundos
+    setTimeout(() => {
+        installButton.style.display = 'none';
+    }, 10000);
+});
+
+// Clique para instalar
+installButton.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+        installButton.style.display = 'none';
+        addSystemMessage('App instalado com sucesso!');
+    }
+    
+    deferredPrompt = null;
+});
+
+// Verifica se já está instalado como PWA
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('📱 Executando como PWA');
+    document.body.classList.add('pwa-mode');
+}
+
+// Service Worker simples apenas para instalação
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(console.log);
+}
 </script>
 </body>
 </html>
+
