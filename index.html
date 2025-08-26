@@ -309,10 +309,6 @@ window.addEventListener('beforeunload', function() {
     sessionStorage.clear();
 });
 
-// ================== CONEXÃO SOCKET ==================
-const serverUrl = 'https://soulschat.onrender.com';
-let socket = null;
-
 // CONFIGURAÇÃO
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
@@ -745,36 +741,13 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 
 // Service Worker simples apenas para instalação
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(console.log);
-// ================== REGISTRO DO SERVICE WORKER ==================
-if ('serviceWorker' in navigator) {
-    // Registra o Service Worker APENAS se não houver problemas
     navigator.serviceWorker.register('/sw.js')
         .then(registration => {
-            console.log('✅ SW registrado com sucesso:', registration.scope);
-            
-            // Verifica se há updates a cada carga
-            registration.addEventListener('updatefound', () => {
-                console.log('🔄 Nova versão do SW encontrada');
-                registration.update();
-            });
+            console.log('✅ SW registrado:', registration.scope);
         })
         .catch(error => {
-            console.log('⚠️ SW não registrado (pode ser normal):', error);
-            // Não bloqueia o app se o SW falhar
+            console.log('⚠️ SW não registrado:', error);
         });
-}
-
-// Função para limpar SWs se der problema
-function clearServiceWorkers() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-            registrations.forEach(registration => {
-                console.log('🗑️ Removendo SW:', registration.scope);
-                registration.unregister();
-            });
-        });
-    }
 }
 
 // Botão de emergência para limpar SWs
@@ -796,7 +769,11 @@ clearSWBtn.style.cssText = `
 
 clearSWBtn.addEventListener('click', () => {
     console.log('🆘 Limpando Service Workers...');
-    clearServiceWorkers();
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(registration => registration.unregister());
+        });
+    }
     setTimeout(() => window.location.reload(true), 1000);
 });
 
@@ -806,6 +783,7 @@ document.body.appendChild(clearSWBtn);
 </script>
 </body>
 </html>
+
 
 
 
