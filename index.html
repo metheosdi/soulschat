@@ -1,29 +1,20 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SOLUÇÃO DEFINITIVA CONTRA CACHE -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Last-Modified" content="<?= new Date().toISOString() ?>">
+    
     <title>Chat Souls</title>
-   <!-- Mude para isso -->
-<script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=2"></script>
-    <!-- Manifest PWA -->
-<!--<link rel="manifest" href="/manifest.json">-->
-
-<!-- Meta tags para PWA -->
-<meta name="theme-color" content="#753">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Chat Souls">
-
-<!-- Ícones para iOS -->
-<link rel="apple-touch-icon" href="/icon-192.png">
-
-<!-- Meta tags para melhor experiência mobile -->
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Socket.io com timestamp para evitar cache -->
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=<?= Date.now() ?>"></script>
     
     <style>
         :root {
@@ -599,6 +590,7 @@ reconnectBtn.addEventListener('click', () => {
 </script>
 </body>
 </html>
+
 
 
 
