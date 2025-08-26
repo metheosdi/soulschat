@@ -7,15 +7,14 @@ const urlsToCache = [
   '/icon-512.png'
 ];
 
-// Instalação do Service Worker
+// Service Worker mínimo - apenas para instalação PWA
 self.addEventListener('install', (event) => {
-  console.log('Service Worker instalado');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache);
-      })
-  );
+    self.skipWaiting();
+    console.log('✅ Service Worker instalado');
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
 });
 
 // Intercepta requisições
@@ -48,4 +47,5 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+
 });
