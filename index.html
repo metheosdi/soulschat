@@ -1,21 +1,10 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- SOLUÇÃO DEFINITIVA CONTRA CACHE -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <meta http-equiv="Last-Modified" content="<?= new Date().toISOString() ?>">
-    
     <title>Chat Souls</title>
-    
-    <!-- Socket.io com timestamp para evitar cache -->
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=<?= Date.now() ?>"></script>
-    
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <style>
         :root {
             --color-bg: #222;
@@ -216,296 +205,441 @@
         </div>
 
         <div class="menu-section">
-<select class="dropdown" id="gesture">
-    <option value="">[Gestos]</option>
-    
-    <!-- ✨ Gestos icônicos -->
-    <option value="🕊️✨">Anel de Miquella</option>
-    <option value="⚔️🤝">Que vença o melhor</option>
-    <option value="✌️🙏">Os dois dedos</option>
-    <option value="🤝🙂">Vamos juntos</option>
-    <option value="🙏🌙">Ó Mãe</option>
-    
-    <!-- 👉 Apontar -->
-    <option value="👉">Apontar para a frente</option>
-    <option value="☝️">Apontar para cima</option>
-    <option value="👇">Apontar para baixo</option>
-    
-    <!-- ✋ Movimentos de mão -->
-    <option value="✋😮">Esperar!</option>
-    <option value="🖐️😌">Acalmar!</option>
-    <option value="👋">Onda</option>
-    <option value="👋🙂">Acenar</option>
-    
-    <!-- 👋 Saudações -->
-    <option value="🙌">Saudação casual</option>
-    <option value="🤗">Calorosas boas-vindas</option>
-    <option value="💪🔥">Força!</option>
-    <option value="👏👏">Bravo!</option>
-    <option value="🤸‍♂️🎉">Pule de alegria</option>
-    <option value="🏆😤">Prazer Triunfante</option>
-    <option value="💃✨">Giro extravagante</option>
-    
-    <!-- 🤔 Pensamento / Expressões -->
-    <option value="🤔">Aceno de cabeça em pensamento</option>
-    <option value="🫰">Estalar de dedos</option>
-    <option value="😱">Grito</option>
-    <option value="📣💪">Grito encorajador</option>
-    
-    <!-- 🙇 Respeito -->
-    <option value="🙇">Curvar-se</option>
-    <option value="🙇‍♂️">Reverência educada</option>
-    <option value="🤲">Como você deseja</option>
-    <option value="🙏">Meus agradecimentos</option>
-    <option value="🙇‍♀️">Curtsy</option>
-    <option value="🛐">Reverential Bow</option>
-    <option value="🤴🙏">Meu Senhor</option>
-    
-    <!-- ❓ Reações -->
-    <option value="🤨">O que você quer?</option>
-    <option value="⚔️✋">Pela minha espada</option>
-    <option value="🤞⚔️">Juramento de Hoslow</option>
-    <option value="🔥😤">Fogo Me Estimula</option>
-    <option value="💍✨">O Anel</option>
-    
-    <!-- 📚 Espiritualidade -->
-    <option value="📖✨">Erudição</option>
-    <option value="🙏">Oração</option>
-    <option value="🙏😭">Oração Desesperada</option>
-    <option value="🤩🙌">Arrebatamento</option>
-    <option value="🌀">Ordem Interna</option>
-    <option value="🌞✨">Totalidade da Ordem Dourada</option>
-    <option value="😔🙏">Arrependimento Extremo</option>
-    <option value="🧎‍♂️🛐">Rastejar por misericórdia</option>
-    
-    <!-- 🪑 Sentar / descanso -->
-    <option value="🧘‍♂️">Pernas cruzadas</option>
-    <option value="😴🧘‍♂️">Cochilo de pernas</option>
-    <option value="🪑🙂">Sentado de lado</option>
-    <option value="🧘‍♀️😌">Descansar cruzadas</option>
-    <option value="😞">Desânimo</option>
-    <option value="🧎‍♂️👀">Agachamento de Patches</option>
-    <option value="🌀😣">Enrolado</option>
-    <option value="🌌✨">Espalhar</option>
-</select>
-
+            <select class="dropdown" id="gesture">
+                <option value="">[Gestos]</option>
+                <option value="🕊️✨">Anel de Miquella</option>
+                <option value="⚔️🤝">Que vença o melhor</option>
+                <option value="✌️🙏">Os dois dedos</option>
+                <option value="🤝🙂">Vamos juntos</option>
+                <option value="🙏🌙">Ó Mãe</option>
+                <option value="👉">Apontar para a frente</option>
+                <option value="☝️">Apontar para cima</option>
+                <option value="👇">Apontar para baixo</option>
+                <option value="✋😮">Esperar!</option>
+                <option value="🖐️😌">Acalmar!</option>
+                <option value="👋">Onda</option>
+                <option value="👋🙂">Acenar</option>
+                <option value="🙌">Saudação casual</option>
+                <option value="🤗">Calorosas boas-vindas</option>
+                <option value="💪🔥">Força!</option>
+                <option value="👏👏">Bravo!</option>
+                <option value="🤸‍♂️🎉">Pule de alegria</option>
+                <option value="🏆😤">Prazer Triunfante</option>
+                <option value="💃✨">Giro extravagante</option>
+                <option value="🤔">Aceno de cabeça em pensamento</option>
+                <option value="🫰">Estalar de dedos</option>
+                <option value="😱">Grito</option>
+                <option value="📣💪">Grito encorajador</option>
+                <option value="🙇">Curvar-se</option>
+                <option value="🙇‍♂️">Reverência educada</option>
+                <option value="🤲">Como você deseja</option>
+                <option value="🙏">Meus agradecimentos</option>
+                <option value="🙇‍♀️">Curtsy</option>
+                <option value="🛐">Reverential Bow</option>
+                <option value="🤴🙏">Meu Senhor</option>
+                <option value="🤨">O que você quer?</option>
+                <option value="⚔️✋">Pela minha espada</option>
+                <option value="🤞⚔️">Juramento de Hoslow</option>
+                <option value="🔥😤">Fogo Me Estimula</option>
+                <option value="💍✨">O Anel</option>
+                <option value="📖✨">Erudição</option>
+                <option value="🙏">Oração</option>
+                <option value="🙏😭">Oração Desesperada</option>
+                <option value="🤩🙌">Arrebatamento</option>
+                <option value="🌀">Ordem Interna</option>
+                <option value="🌞✨">Totalidade da Ordem Dourada</option>
+                <option value="😔🙏">Arrependimento Extremo</option>
+                <option value="🧎‍♂️🛐">Rastejar por misericórdia</option>
+                <option value="🧘‍♂️">Pernas cruzadas</option>
+                <option value="😴🧘‍♂️">Cochilo de pernas</option>
+                <option value="🪑🙂">Sentado de lado</option>
+                <option value="🧘‍♀️😌">Descansar cruzadas</option>
+                <option value="😞">Desânimo</option>
+                <option value="🧎‍♂️👀">Agachamento de Patches</option>
+                <option value="🌀😣">Enrolado</option>
+                <option value="🌌✨">Espalhar</option>
+            </select>
         </div>
         <button id="send-button">Deixar Mensagem</button>
         <button id="clear-history-btn">Limpar Histórico</button>
         <button id="notif-btn">🔔 Notificações</button>
     </div>
 
-<script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=2"></script>
 <script>
-// ================== ANTI-CACHE AUTOMÁTICO ==================
-console.log('🔄 Anti-cache ativado', new Date().toLocaleTimeString());
-
-// Força recarregamento se a página estiver em cache
-if (performance.navigation.type === 2) {
-    // Página foi carregada via cache de voltar/avançar
-    console.log('🔄 Página carregada do cache - recarregando...');
-    window.location.reload(true);
-}
-
-// Verifica se é uma versão antiga em cache
-const currentVersion = 'v2.1';
-const storedVersion = localStorage.getItem('app_version');
-
-if (storedVersion !== currentVersion) {
-    console.log('🔄 Nova versão detectada - limpando cache...');
-    localStorage.setItem('app_version', currentVersion);
-    
-    // Limpa caches específicos
-    localStorage.removeItem('soulsChatHistory');
-    sessionStorage.clear();
-    
-    // Força recarregamento
-    window.location.reload(true);
-}
-
-// Previne cache do navegador
-window.addEventListener('beforeunload', function() {
-    console.log('🔄 Prevenindo cache...');
-});
-
-// ================== CONEXÃO SOCKET ==================
+// CONFIGURAÇÃO
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
-let reconnectTimeout = null;
-const statusElement = document.getElementById('connection-status');
+let isTryingToReconnect = false;
 let lastMessageText = '';
-let connectionAttempts = 0;
+const statusElement = document.getElementById('connection-status');
 
-// FUNÇÃO DE CONEXÃO COM VERIFICAÇÃO DE CACHE
-function connectToServer() {
-    console.log('🔗 Tentativa de conexão', connectionAttempts + 1, new Date().toLocaleTimeString());
+// FUNÇÃO PARA PREENCHER DROPDOWNS COM PALAVRAS
+function preencherDropdownPalavras(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
     
-    // Verifica se o Socket.IO carregou corretamente
-    if (typeof io === 'undefined') {
-        console.error('❌ Socket.IO não carregado - recarregando página...');
-        setTimeout(() => window.location.reload(true), 2000);
-        return;
+    // Limpa o dropdown (mantém apenas a primeira option)
+    while (dropdown.options.length > 1) {
+        dropdown.remove(1);
     }
     
-    // Limpa tentativa anterior
-    if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-    }
+    // Todas as palavras organizadas por categoria
+    const palavras = {
+        "Inimigos": [
+            "Inimigo", "Inimigo Fraco", "Inimigo Forte", "Monstro", "dragão", "Chefe", "Sentinela", 
+            "Grupo", "Bando", "Chamariz", "Morto-Vivo", "soldado", "cavaleiro", "Cavalheiro", 
+            "Arqueiro", "Atirador", "Mago", "artilharia", "monarca", "demi-humano", "estrangeiro", 
+            "gigante", "cavalo", "cachorro", "lobo", "rato", "fera", "pássaro", "ave de rapina", 
+            "cobra", "carangueijo", "camarão", "polvo", "inseto", "escaravelho", "lesma", "aparição", 
+            "esqueleto", "monstruosidade", "criatura agourenta"
+        ],
+        "Pessoas": [
+            "Maculado", "guerreiro", "espadachim", "cavaleiro", "Samurai", "feiticeiro", "clérigo", 
+            "sábio", "professor", "mestre", "amigo", "amante", "velho querido", "velho maluco", 
+            "anjo", "Bolsa de moedas cheia", "pobre", "boa pessoa", "pessoa perversa", "pessoa gorda", 
+            "pessoa magra", "pessoa adorável", "pessoa patética", "pessoa estranha", "pessoa agil", 
+            "pessoa lenta", "pessoa invisivel", "pessoa gigante", "pescador", "ladrão", "mentiroso", 
+            "covarde", "traidor", "par", "trio", "nobre", "aristocrata", "herói", "campeão", 
+            "monarca", "senhor", "deus"
+        ],
+        "Coisas": [
+            "item", "item necesário", "item precioso", "algo", "algo incrível", "Tesouro", "cadaver", 
+            "caixão", "armadilha", "escudo", "arco", "arma de projétil", "armadura", "talismã", 
+            "habilidade", "feitiçaria", "encantamento", "mapa", "material", "flor", "grama", "árvore", 
+            "fruta", "semente", "cogumelo", "lágrima", "cristal", "borboleta", "inseto", "estrume", 
+            "graça", "porta", "chave", "escada", "alavanca", "elevador", "Nascente de espírito", 
+            "portão de envio", "astrolábio de pedra", "telescopio", "mensagem", "mancha", "Térvore", 
+            "Elden Ring"
+        ],
+        "Tática de Batalha": [
+            "desespero", "Batalha Corpo a Corpo", "Batalha à distancia", "Batalha a cavalo", "atrair", 
+            "Dorrotar um por um", "Derrotando todos de uma vez", "correndo", "furtividade", "mimetismo", 
+            "confusão", "perseguição", "fugindo", "Invocação", "circulando", "pulando", "breve pausa"
+        ],
+        "Ações": [
+            "Atacando", "ataque com salto", "ataque com corrida", "acerto critico", 
+            "segurar com as duas mãos", "bloqueio", "aparando", "contra-ataque", "feitiçaria", 
+            "encantamento", "habilidade", "invocação", "arremessando", "curando", "correndo", 
+            "rolando", "retrocedendo", "pulando", "agachado", "travar a mira", "criação de itens", 
+            "gesticulando"
+        ],
+        "Situações": [
+            "Manhã", "Meio-dia", "Noite", "céu claro", "nublado", "chuva", "tempestade", "névoa", 
+            "neve", "Patrulhando", "procissão", "multidão", "Ataque surpresa", "emboscada", "cercado", 
+            "reduzido a pó", "batalha", "Reforços", "Ritual", "explosão", "local alto", 
+            "local defensável", "local escalável", "local brilhante", "local escura", "área aberta", 
+            "área apertada", "esconderijo", "local de atirar", "local de reconhecimento", "segurança", 
+            "perigo", "vista deslumbrante", "desvio", "caminho oculto", "Passagem secreta", "atalho", 
+            "impasse", "desviando o olhar", "despercebido", "sem vigor"
+        ],
+        "Trajeto": [
+            "Leste", "Oeste", "Sul", "Norte", "adiante", "atrás", "Esquerda", "Direita", "centro", 
+            "em cima", "abaixo", "borda"
+        ],
+        "Partes do corpo": [
+            "cabeça", "estômago", "Costas", "braços", "perna", "garupa", "cauda", "núcleo", "Dedos"
+        ],
+        "Afinidades": [
+            "físico", "padrão", "contundente", "Cortar", "penetrante", "Fogo", "relâmpago", "magia", 
+            "santo", "veneno", "tóxico", "podridão escarlate", "perda de sangue", "geada", "dormir", 
+            "loucura", "morte"
+        ],
+        "Conceitos": [
+            "vida", "Morte", "luz", "escuro", "Estrelas", "Fogo", "Ordem", "caos", "alegria", "ira", 
+            "sofrimento", "tristeza", "confortar", "bem-aventurança", "infortúnio", "boa sorte", "azar", 
+            "esperança", "desespero", "vitória", "derrota", "investigação", "fé", "abundância", 
+            "podridão", "lealdade", "injustiça", "segredo", "oportunidade", "apuro", "pista", "amizade", 
+            "amor", "valentia", "vigor", "firmeza", "confiança", "distraído", "Desprotegido", 
+            "introspecção", "lamentar", "arrependimento", "futilidade", "à beira do abismo", "traição", 
+            "vingança", "destruição", "imprudência", "calma", "vigilância", "tranquilidade", "som", 
+            "lágrimas", "dormir", "profundezidade", "escória", "medo", "sacrifício", "ruína"
+        ],
+        "Frases": [
+            "Boa sorte", "Olhe com atenção", "Ouça com atenção", "Pense com cuidado", "Muito bem", 
+            "Eu fiz isso!", "Eu falhei...", "aqui!", "Aqui não!", "Não se atreva!", "Faça isso!", 
+            "Eu não aguento isso...", "não pense", "tão solitário...", "aqui de novo...", 
+            "apenas começando", "Mantenha a calma", "continue se movendo", "voltar", "desistir", 
+            "Não desista", "Me ajuda...", "Eu não acredito...", "muito alto", "Eu quero ir para casa...", 
+            "é como um sonho...", "parece familiar ...", "bonito...", "você não tem o direito", 
+            "Está pronto?"
+        ]
+    };
     
-    if (socket) {
-        try {
-            socket.disconnect();
-            socket.removeAllListeners();
-        } catch (e) {
-            console.log('Socket já fechado');
+    // Adiciona as palavras ao dropdown
+    for (const [categoria, palavrasArray] of Object.entries(palavras)) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = categoria;
+        
+        palavrasArray.forEach(palavra => {
+            const option = document.createElement('option');
+            option.value = palavra;
+            option.textContent = palavra;
+            optgroup.appendChild(option);
+        });
+        
+        dropdown.appendChild(optgroup);
+    }
+}
+
+// FUNÇÕES DE ARMAZENAMENTO LOCAL
+function saveChatHistory() {
+    const chatContainer = document.getElementById('chat-container');
+    const chatHTML = chatContainer.innerHTML;
+    localStorage.setItem('soulsChatHistory', chatHTML);
+}
+
+function loadChatHistory() {
+    const savedHistory = localStorage.getItem('soulsChatHistory');
+    if (savedHistory) {
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.innerHTML = savedHistory;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+}
+
+function clearChatHistory() {
+    if (confirm('Deseja apagar todo o histórico de mensagens?')) {
+        localStorage.removeItem('soulsChatHistory');
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
+        addSystemMessage('Histórico limpo.');
+    }
+}
+
+// FUNÇÃO PARA VERIFICAR ESTADO DAS NOTIFICAÇÕES
+function verificarEstadoNotificacoes() {
+    if ('Notification' in window) {
+        console.log('Suporte a notificações: Sim');
+        console.log('Permissão atual:', Notification.permission);
+        
+        if (Notification.permission === 'default') {
+            console.log('Solicitando permissão explicitamente...');
+            Notification.requestPermission().then(permission => {
+                console.log('Permissão definida como:', permission);
+            });
         }
-    }
-
-    statusElement.textContent = '🟡 Conectando...';
-    statusElement.style.color = 'yellow';
-    connectionAttempts++;
-
-    try {
-        // Conexão SIMPLES sem muitas opções
-        socket = io(serverUrl, {
-            transports: ['polling', 'websocket'],
-            timeout: 5000,
-            reconnection: false,
-            forceNew: true
-        });
-
-        // EVENTOS
-        socket.on('connect', () => {
-            console.log('✅ Conectado! Sessão:', socket.id);
-            connectionAttempts = 0;
-            statusElement.textContent = '🟢 Conectado';
-            statusElement.style.color = 'lightgreen';
-            addSystemMessage('Conectado ao servidor.');
-        });
-
-        socket.on('historico-completo', (historico) => {
-            console.log('📋 Histórico recebido:', historico.length, 'mensagens');
-            if (historico.length > 0) {
-                historico.forEach(msg => {
-                    addMessageToChat(msg, false);
-                });
-            }
-        });
-
-        socket.on('receber-mensagem', (data) => {
-            console.log('📨 Mensagem recebida:', data.texto);
-            addMessageToChat(data.texto, false);
-        });
-
-        socket.on('disconnect', (reason) => {
-            console.log('❌ Desconectado:', reason);
-            handleDisconnection(reason);
-        });
-
-        socket.on('connect_error', (error) => {
-            console.error('❌ Erro de conexão:', error.message);
-            handleConnectionError(error);
-        });
-
-        // Timeout de segurança
-        setTimeout(() => {
-            if (socket && !socket.connected) {
-                console.log('⏰ Timeout de conexão');
-                handleConnectionError(new Error('Timeout'));
-            }
-        }, 8000);
-
-    } catch (error) {
-        console.error('❌ Erro ao criar socket:', error);
-        handleConnectionError(error);
+    } else {
+        console.log('Suporte a notificações: Não');
     }
 }
 
-function handleDisconnection(reason) {
-    statusElement.textContent = '🔴 Desconectado';
-    statusElement.style.color = 'lightpink';
-    
-    const delay = Math.min(connectionAttempts * 1000, 5000);
-    console.log(`⏳ Reconectando em ${delay/1000}s...`);
-    
-    reconnectTimeout = setTimeout(connectToServer, delay);
-}
-
-function handleConnectionError(error) {
-    statusElement.textContent = '🔴 Erro de conexão';
-    statusElement.style.color = 'orange';
-    
-    // Se muitas tentativas falharem, sugere recarregar
-    if (connectionAttempts >= 3) {
-        statusElement.textContent = '⚡ Recarregue a página';
-        statusElement.style.color = 'red';
-        addSystemMessage('Problema de conexão. Tente recarregar a página (Ctrl+F5).');
+// FUNÇÃO DE NOTIFICAÇÕES ATUALIZADA
+function mostrarNotificacao(mensagem) {
+    if (!('Notification' in window)) {
+        console.log('Este browser não suporta notificações');
         return;
     }
-    
-    const delay = Math.min(connectionAttempts * 2000, 8000);
-    console.log(`⏳ Nova tentativa em ${delay/1000}s...`);
-    
-    reconnectTimeout = setTimeout(connectToServer, delay);
+
+    console.log('Tentando mostrar notificação para:', mensagem);
+    console.log('Permissão atual:', Notification.permission);
+    console.log('Janela em foco?', !document.hidden);
+
+    // Só mostra notificação se a janela não estiver em foco
+    if (document.hidden) {
+        if (Notification.permission === 'granted') {
+            try {
+                const notificacao = new Notification('💬 Message App', {
+                    body: mensagem,
+                    icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23441201"/><text x="50" y="50" font-size="40" text-anchor="middle" fill="white">💬</text></svg>',
+                    tag: 'souls-chat',
+                    requireInteraction: false
+                });
+
+                console.log('Notificação criada com sucesso');
+
+                setTimeout(() => {
+                    notificacao.close();
+                }, 7000);
+
+                notificacao.onclick = function() {
+                    window.focus();
+                    this.close();
+                };
+
+            } catch (error) {
+                console.error('Erro ao criar notificação:', error);
+            }
+        } else if (Notification.permission !== 'denied') {
+            console.log('Solicitando permissão...');
+            Notification.requestPermission().then(permission => {
+                console.log('Nova permissão:', permission);
+                if (permission === 'granted') {
+                    mostrarNotificacao(mensagem);
+                }
+            });
+        }
+    } else {
+        console.log('Notificação não mostrada: janela está em foco');
+    }
 }
 
-// ... (O RESTANTE DO SEU CÓDIGO PERMANECE IGUAL) ...
+// CONEXÃO COM SERVIDOR
+function connectToServer() {
+    if (socket?.connected) return;
+    if (socket) {
+        socket.removeAllListeners();
+        socket.disconnect();
+    }
 
-// MODIFIQUE A INICIALIZAÇÃO PARA ISSO:
+    console.log('Tentando conectar...');
+    isTryingToReconnect = true;
+    socket = io(serverUrl);
+
+    socket.on('connect', () => {
+        console.log('Conectado!');
+        isTryingToReconnect = false;
+        statusElement.textContent = '🟢 Conectado';
+        statusElement.style.color = 'lightgreen';
+        addSystemMessage('Você se conectou ao chat.');
+    });
+
+    socket.on('historico-completo', (historico) => {
+        console.log('Histórico recebido:', historico);
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
+        
+        historico.forEach(msg => {
+            addMessageToChat(msg, false);
+        });
+        addSystemMessage('Histórico carregado.');
+    });
+
+    socket.on('receber-mensagem', (data) => {
+        console.log('Mensagem recebida:', data.texto);
+        addMessageToChat(data.texto, false);
+        
+        // Tenta mostrar notificação com pequeno delay
+        setTimeout(() => {
+            mostrarNotificacao(data.texto);
+        }, 1000);
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Desconectado:', reason);
+        statusElement.textContent = '🔴 Desconectado';
+        statusElement.style.color = 'lightpink';
+        addSystemMessage('Desconectado. Reconectando...');
+        if (!isTryingToReconnect) setTimeout(connectToServer, 3000);
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Erro de conexão:', error);
+        addSystemMessage('Falha ao conectar.');
+        if (!isTryingToReconnect) setTimeout(connectToServer, 3000);
+    });
+}
+
+// CONTROLE DE UI
+const template1 = document.getElementById('template-1');
+const word1 = document.getElementById('word-1');
+const secondLine = document.getElementById('second-line');
+
+function updateSecondLineVisibility() {
+    secondLine.style.display = (template1.value && word1.value) ? 'block' : 'none';
+}
+word1.addEventListener('change', updateSecondLineVisibility);
+template1.addEventListener('change', updateSecondLineVisibility);
+
+// ENVIO DE MENSAGENS
+document.getElementById('send-button').addEventListener('click', enviarMensagem);
+
+function enviarMensagem() {
+    const t1 = template1.value;
+    const w1 = word1.value;
+    const conj = document.getElementById('conjunction').value;
+    const t2 = document.getElementById('template-2').value;
+    const w2 = document.getElementById('word-2').value;
+    const gesto = document.getElementById('gesture').value;
+
+    if (!t1 || !w1) {
+        alert('Precursor, complete a mensagem!');
+        return;
+    }
+
+    let msg = t1.replace('****', w1);
+    if (conj && t2 && w2) msg += ` ${conj} ${t2.replace('****', w2)}`;
+    if (gesto) msg += ` ${gesto}`;
+
+    if (socket && socket.connected) {
+        socket.emit('enviar-mensagem', { texto: msg });
+        clearForm();
+    } else {
+        addSystemMessage('Erro: Não conectado.');
+    }
+}
+
+function clearForm() {
+    template1.selectedIndex = 0;
+    word1.selectedIndex = 0;
+    document.getElementById('conjunction').selectedIndex = 0;
+    document.getElementById('template-2').selectedIndex = 0;
+    document.getElementById('word-2').selectedIndex = 0;
+    document.getElementById('gesture').selectedIndex = 0;
+    secondLine.style.display = 'none';
+}
+
+// GERENCIAMENTO DE CHAT
+function addMessageToChat(text, isSelf = false) {
+    if (text === lastMessageText) {
+        console.log('Mensagem duplicada ignorada:', text);
+        return;
+    }
+    lastMessageText = text;
+
+    const msgElement = document.createElement('div');
+    msgElement.classList.add('message');
+    if (isSelf) msgElement.classList.add('self');
+    msgElement.textContent = text;
+
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.appendChild(msgElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    saveChatHistory();
+}
+
+function addSystemMessage(text) {
+    const sysElement = document.createElement('div');
+    sysElement.classList.add('message', 'system-msg');
+    sysElement.textContent = text;
+
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.appendChild(sysElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    saveChatHistory();
+}
+
+// INICIALIZAÇÃO
 window.addEventListener('load', function() {
-    console.log('🚀 Iniciando aplicação...', new Date().toLocaleTimeString());
+    // Preenche os dropdowns de palavras
+    preencherDropdownPalavras('word-1');
+    preencherDropdownPalavras('word-2');
     
-    // Pequeno delay para garantir tudo carregou
-    setTimeout(() => {
-        preencherDropdownPalavras('word-1');
-        preencherDropdownPalavras('word-2');
-        loadChatHistory();
-        connectToServer();
-    }, 500);
+    verificarEstadoNotificacoes();
+    connectToServer();
 });
 
-// ADICIONE ESTE BOTÃO DE RECARREGAMENTO
-const reloadBtn = document.createElement('button');
-reloadBtn.textContent = '🔄 Recarregar';
-reloadBtn.id = 'reload-btn';
-reloadBtn.style.cssText = `
-    position: fixed;
-    bottom: 14rem;
-    right: 2rem;
-    background: #553;
-    color: white;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 1000;
-    font-size: 12px;
-`;
+// BOTÕES
+document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
 
-reloadBtn.addEventListener('click', () => {
-    console.log('🔄 Recarregamento manual');
-    window.location.reload(true);
+document.getElementById('notif-btn').addEventListener('click', () => {
+    if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+            const status = document.getElementById('connection-status');
+            if (permission === 'granted') {
+                status.textContent = '🔔 Notificações Ativas';
+                status.style.color = 'lightblue';
+                setTimeout(() => {
+                    mostrarNotificacao('Teste de notificação bem-sucedido!');
+                }, 1000);
+            } else {
+                status.textContent = '🔕 Notificações Bloqueadas';
+                status.style.color = 'orange';
+            }
+            alert('Status das notificações: ' + permission);
+        });
+    } else {
+        alert('Seu navegador não suporta notificações');
+    }
 });
-
-document.body.appendChild(reloadBtn);
-</script>
-    <script>
-// Registra Service Worker para limpar cache
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw-cache.js', { scope: '/' });
-}
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
