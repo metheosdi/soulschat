@@ -23,7 +23,14 @@ function loadHistory() {
   try {
     if (fs.existsSync(HISTORY_FILE)) {
       const data = fs.readFileSync(HISTORY_FILE, 'utf8');
-      return JSON.parse(data);
+      const historico = JSON.parse(data);
+      
+      // Se o histórico contiver objetos, extrai apenas o texto
+      if (historico.length > 0 && typeof historico[0] === 'object') {
+        return historico.map(item => item.text || item);
+      }
+      
+      return historico;
     }
   } catch (error) {
     console.error('Erro ao carregar histórico:', error);
@@ -124,3 +131,4 @@ process.on('SIGINT', () => {
   saveHistory(chatHistory);
   process.exit(0);
 });
+
