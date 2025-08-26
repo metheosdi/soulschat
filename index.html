@@ -299,106 +299,72 @@
         <button id="notif-btn">🔔 Notificações</button>
     </div>
 
+<script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
 <script>
 // CONFIGURAÇÃO
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 3;
 const statusElement = document.getElementById('connection-status');
 let lastMessageText = '';
 
-// FUNÇÃO SIMPLIFICADA DE CONEXÃO
+// FUNÇÃO DE CONEXÃO SIMPLIFICADA
 function connectToServer() {
-    console.log('Tentando conectar...');
+    console.log('🔗 Tentando conectar...');
     
+    // Fecha conexão anterior se existir
     if (socket) {
-        socket.removeAllListeners();
         socket.disconnect();
+        socket.removeAllListeners();
     }
 
     statusElement.textContent = '🟡 Conectando...';
     statusElement.style.color = 'yellow';
 
+    // Conexão SIMPLES sem opções complexas
     socket = io(serverUrl, {
-        timeout: 10000,
-        reconnection: false // Controlamos a reconexão manualmente
+        transports: ['polling', 'websocket'],
+        timeout: 10000
     });
 
+    // EVENTOS BÁSICOS
     socket.on('connect', () => {
         console.log('✅ Conectado!');
-        reconnectAttempts = 0;
         statusElement.textContent = '🟢 Conectado';
         statusElement.style.color = 'lightgreen';
         addSystemMessage('Conectado ao servidor.');
     });
 
     socket.on('historico-completo', (historico) => {
-        console.log('Histórico recebido:', historico.length, 'mensagens');
-        const chatContainer = document.getElementById('chat-container');
-        
-        // Mantém mensagem de boas-vindas se não houver histórico
+        console.log('📋 Histórico recebido:', historico.length, 'mensagens');
         if (historico.length > 0) {
-            chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
             historico.forEach(msg => {
                 addMessageToChat(msg, false);
             });
+            addSystemMessage('Histórico carregado.');
         }
     });
 
     socket.on('receber-mensagem', (data) => {
-        console.log('Mensagem recebida:', data.texto);
+        console.log('📨 Mensagem recebida:', data.texto);
         addMessageToChat(data.texto, false);
     });
 
     socket.on('disconnect', (reason) => {
-        console.log('Desconectado:', reason);
-        handleDisconnection();
+        console.log('❌ Desconectado:', reason);
+        statusElement.textContent = '🔴 Desconectado';
+        statusElement.style.color = 'lightpink';
+        addSystemMessage('Desconectado. Tentando reconectar em 5s...');
+        setTimeout(connectToServer, 5000);
     });
 
     socket.on('connect_error', (error) => {
-        console.error('Erro de conexão:', error);
-        handleConnectionError();
+        console.error('❌ Erro de conexão:', error.message);
+        statusElement.textContent = '🔴 Erro de conexão';
+        statusElement.style.color = 'orange';
+        addSystemMessage('Erro ao conectar. Tentando novamente em 10s...');
+        setTimeout(connectToServer, 10000);
     });
-
-    // Timeout de segurança
-    setTimeout(() => {
-        if (socket && !socket.connected) {
-            console.log('Timeout de conexão');
-            handleConnectionError();
-        }
-    }, 15000);
 }
-
-function handleDisconnection() {
-    statusElement.textContent = '🔴 Desconectado';
-    statusElement.style.color = 'lightpink';
-    addSystemMessage('Desconectado. Tentando reconectar em 5 segundos...');
-    
-    setTimeout(() => {
-        connectToServer();
-    }, 5000);
-}
-
-function handleConnectionError() {
-    reconnectAttempts++;
-    console.log('Tentativa', reconnectAttempts, 'de', MAX_RECONNECT_ATTEMPTS);
-    
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        statusElement.textContent = '⚫ Conexão falhou';
-        statusElement.style.color = 'gray';
-        addSystemMessage('Não foi possível conectar. Recarregue a página para tentar novamente.');
-        return;
-    }
-    
-    statusElement.textContent = `🟡 Tentando novamente (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`;
-    
-    setTimeout(() => {
-        connectToServer();
-    }, 3000);
-}
-
-// ... (AS OUTRAS FUNÇÕES PERMANECEM EXATAMENTE COMO ESTAVAM NO SEU CÓDIGO ORIGINAL) ...
 
 // FUNÇÃO PARA PREENCHER DROPDOWNS COM PALAVRAS
 function preencherDropdownPalavras(dropdownId) {
@@ -414,7 +380,7 @@ function preencherDropdownPalavras(dropdownId) {
         "Coisas": ["item", "item necesário", "item precioso", "algo", "algo incrível", "Tesouro", "cadaver", "caixão", "armadilha", "escudo", "arco", "arma de projétil", "armadura", "talismã", "habilidade", "feitiçaria", "encantamento", "mapa", "material", "flor", "grama", "árvore", "fruta", "semente", "cogumelo", "lágrima", "cristal", "borboleta", "inseto", "estrume", "graça", "porta", "chave", "escada", "alavanca", "elevador", "Nascente de espírito", "portão de envio", "astrolábio de pedra", "telescopio", "mensagem", "mancha", "Térvore", "Elden Ring"],
         "Tática de Batalha": ["desespero", "Batalha Corpo a Corpo", "Batalha à distancia", "Batalha a cavalo", "atrair", "Dorrotar um por um", "Derrotando todos de uma vez", "correndo", "furtividade", "mimetismo", "confusão", "perseguição", "fugindo", "Invocação", "circulando", "pulando", "breve pausa"],
         "Ações": ["Atacando", "ataque com salto", "ataque com corrida", "acerto critico", "segurar com as duas mãos", "bloqueio", "aparando", "contra-ataque", "feitiçaria", "encantamento", "habilidade", "invocação", "arremessando", "curando", "correndo", "rolando", "retrocedendo", "pulando", "agachado", "travar a mira", "criação de itens", "gesticulando"],
-        "Situações": ["Manhã", "Meio-dia", "Noite", "céu claro", "nublado", "chuva", "tempestade", "névoa", "neve", "Patrulhando", "procissão", "multidão", "Ataque surpresa", "emboscada", "cercado", "reduzido a pó", "batalha", "Reforços", "Ritual", "explosão", "local alto", "local defensável", "local escalável", "local brilhante", "local escura", "área aberta", "área apertada", "esconderijo", "local de atirar", "local de reconhecimento", "segurança", "perigo", "vista deslumbrante", "desvio", "caminho oculto", "Passagem secreta", "atalho", "impasse", "desviando o olhar", "despercebido", "sem vigor"],
+        "Situações": ["Manhã", "Meio-dia", "Noite", "ceu claro", "nublado", "chuva", "tempestade", "névoa", "neve", "Patrulhando", "procissão", "multidão", "Ataque surpresa", "emboscada", "cercado", "reduzido a pó", "batalha", "Reforços", "Ritual", "explosão", "local alto", "local defensável", "local escalável", "local brilhante", "local escura", "área aberta", "área apertada", "esconderijo", "local de atirar", "local de reconhecimento", "segurança", "perigo", "vista deslumbrante", "desvio", "caminho oculto", "Passagem secreta", "atalho", "impasse", "desviando o olhar", "despercebido", "sem vigor"],
         "Trajeto": ["Leste", "Oeste", "Sul", "Norte", "adiante", "atrás", "Esquerda", "Direita", "centro", "em cima", "abaixo", "borda"],
         "Partes do corpo": ["cabeça", "estômago", "Costas", "braços", "perna", "garupa", "cauda", "núcleo", "Dedos"],
         "Afinidades": ["físico", "padrão", "contundente", "Cortar", "penetrante", "Fogo", "relâmpago", "magia", "santo", "veneno", "tóxico", "podridão escarlate", "perda de sangue", "geada", "dormir", "loucura", "morte"],
@@ -459,43 +425,6 @@ function clearChatHistory() {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
         addSystemMessage('Histórico limpo.');
-    }
-}
-
-// FUNÇÃO PARA VERIFICAR ESTADO DAS NOTIFICAÇÕES
-function verificarEstadoNotificacoes() {
-    if ('Notification' in window) {
-        console.log('Suporte a notificações: Sim');
-        console.log('Permissão atual:', Notification.permission);
-        
-        if (Notification.permission === 'default') {
-            console.log('Solicitando permissão explicitamente...');
-            Notification.requestPermission().then(permission => {
-                console.log('Permissão definida como:', permission);
-            });
-        }
-    } else {
-        console.log('Suporte a notificações: Não');
-    }
-}
-
-// FUNÇÃO DE NOTIFICAÇÕES
-function mostrarNotificacao(mensagem) {
-    if (!('Notification' in window)) return;
-    if (document.hidden && Notification.permission === 'granted') {
-        try {
-            const notificacao = new Notification('💬 Message App', {
-                body: mensagem,
-                icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23441201"/><text x="50" y="50" font-size="40" text-anchor="middle" fill="white">💬</text></svg>',
-                tag: 'souls-chat'
-            });
-
-            setTimeout(() => notificacao.close(), 7000);
-            notificacao.onclick = () => window.focus();
-
-        } catch (error) {
-            console.error('Erro ao criar notificação:', error);
-        }
     }
 }
 
@@ -582,52 +511,20 @@ function addSystemMessage(text) {
 window.addEventListener('load', function() {
     preencherDropdownPalavras('word-1');
     preencherDropdownPalavras('word-2');
-    verificarEstadoNotificacoes();
     loadChatHistory();
-    
-    // Conectar com pequeno delay
-    setTimeout(connectToServer, 1000);
+    connectToServer(); // Conecta imediatamente
 });
 
 // BOTÕES
 document.getElementById('clear-history-btn').addEventListener('click', clearChatHistory);
 
 document.getElementById('notif-btn').addEventListener('click', () => {
-    if ('Notification' in window) {
-        Notification.requestPermission().then(permission => {
-            alert('Status das notificações: ' + permission);
-        });
-    } else {
-        alert('Seu navegador não suporta notificações');
-    }
-});
-
-// BOTÃO DE RECONEXÃO MANUAL
-const reconnectBtn = document.createElement('button');
-reconnectBtn.textContent = '↻ Reconectar';
-reconnectBtn.id = 'reconnect-btn';
-reconnectBtn.style.cssText = `
-    position: fixed;
-    bottom: 11rem;
-    right: 2rem;
-    background: #353;
-    color: white;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 1000;
-`;
-
-document.body.appendChild(reconnectBtn);
-
-reconnectBtn.addEventListener('click', () => {
-    reconnectAttempts = 0;
-    connectToServer();
+    alert('Funcionalidade de notificações');
 });
 </script>
 </body>
 </html>
+
 
 
 
