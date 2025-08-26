@@ -1,40 +1,60 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 
-// Configuração do Socket.io com CORS
 const io = socketIo(server, {
   cors: {
-    origin: "*", // Permite todas as origens (em produção, especifique a URL do seu frontend)
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
 
-// Armazenamento em memória com limite de 100 mensagens
-let chatHistory = [];
-const MAX_HISTORY_LENGTH = 100;
+// Arquivo para salvar o histórico
+const HISTORY_FILE = path.join(__dirname, 'chatHistory.json');
+const MAX_HISTORY_LENGTH = 200;
 
-// Middleware para logging de requisições
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
+// Função para carregar o histórico do arquivo
+function loadHistory() {
+  try {
+    if (fs.existsSync(HISTORY_FILE)) {
+      const data = fs.readFileSync(HISTORY_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Erro ao carregar histórico:', error);
+  }
+  return [];
+}
 
-// Rota de saúde para verificar se o servidor está online
+// Função para salvar o histórico no arquivo
+function saveHistory(history) {
+  try {
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+    console.log('Histórico salvo no arquivo');
+  } catch (error) {
+    console.error('Erro ao salvar histórico:', error);
+  }
+}
+
+// Carrega o histórico inicial do arquivo
+let chatHistory = loadHistory();
+console.log(`Histórico carregado: ${chatHistory.length} mensagens`);
+
+// Rota simples de saúde
 app.get('/', (req, res) => {
   res.json({ 
-    status: 'online',
-    message: '✅ Servidor do Chat Souls está operacional',
+    message: '✅ Servidor do Chat Souls está online!',
     messageCount: chatHistory.length,
-    connectedUsers: io.engine.clientsCount,
-    uptime: process.uptime().toFixed(2) + ' segundos'
+    lastMessage: chatHistory.length > 0 ? chatHistory[chatHistory.length - 1] : 'Nenhuma mensagem'
   });
 });
 
-// Rota para visualizar o histórico (apenas para debug)
+// Rota para visualizar o histórico completo
 app.get('/history', (req, res) => {
   res.json({
     count: chatHistory.length,
@@ -42,108 +62,65 @@ app.get('/history', (req, res) => {
   });
 });
 
-// Rota para limpar o histórico (apenas para debug)
+// Rota para limpar o histórico (apenas para administração)
 app.delete('/history', (req, res) => {
   chatHistory = [];
+  saveHistory(chatHistory);
   res.json({ message: 'Histórico limpo com sucesso', count: 0 });
 });
 
-// Função para adicionar mensagem ao histórico com limite
-function addToHistory(message) {
-  chatHistory.push(message);
-  
-  // Mantém apenas as últimas MAX_HISTORY_LENGTH mensagens
-  if (chatHistory.length > MAX_HISTORY_LENGTH) {
-    chatHistory = chatHistory.slice(-MAX_HISTORY_LENGTH);
-    console.log(`Histórico limitado às últimas ${MAX_HISTORY_LENGTH} mensagens`);
-  }
-}
-
 // Lógica principal de conexão e chat
 io.on('connection', (socket) => {
-  const clientId = socket.id.substring(0, 8); // Pega os primeiros 8 caracteres do ID
-  console.log(`🔗 Novo precursor conectado: ${clientId}`);
-  console.log(`👥 Usuários conectados: ${io.engine.clientsCount}`);
+  console.log('🔗 Um precursor se conectou: ' + socket.id);
 
-  // 1. Envia o histórico completo APENAS para o novo cliente
+  // 1. ENVIA O HISTÓRICO COMPLETO para o novo cliente
   socket.emit('historico-completo', chatHistory);
-  console.log(`📋 Histórico enviado para ${clientId} (${chatHistory.length} mensagens)`);
 
   // 2. Ouvinte para mensagens recebidas
   socket.on('enviar-mensagem', (dados) => {
-      if (!dados.texto || dados.texto.trim() === '') {
-        console.log(`⚠️  Mensagem vazia recebida de ${clientId}`);
-        return;
-      }
+    if (!dados.texto || dados.texto.trim() === '') {
+      console.log(`⚠️  Mensagem vazia recebida de ${socket.id}`);
+      return;
+    }
 
-      const mensagem = dados.texto.trim();
-      console.log(`📨 Mensagem de ${clientId}: ${mensagem}`);
-      
-      // Adiciona a nova mensagem ao histórico
-      addToHistory(mensagem);
+    const mensagem = dados.texto.trim();
+    console.log(`📨 Mensagem de ${socket.id}: ${mensagem}`);
+    
+    // Adiciona a nova mensagem ao histórico
+    chatHistory.push({
+      text: mensagem,
+      timestamp: new Date().toISOString(),
+      id: Date.now() + Math.random().toString(36).substr(2, 9)
+    });
+    
+    // Limita o tamanho do histórico
+    if (chatHistory.length > MAX_HISTORY_LENGTH) {
+      chatHistory = chatHistory.slice(-MAX_HISTORY_LENGTH);
+    }
 
-      // Repassa apenas a NOVA mensagem para TODOS os clientes
-      io.emit('receber-mensagem', { 
-        texto: mensagem,
-        timestamp: new Date().toISOString()
-      });
+    // Salva o histórico no arquivo
+    saveHistory(chatHistory);
 
-      console.log(`📤 Mensagem broadcastada para ${io.engine.clientsCount} usuários`);
+    // Repassa a mensagem para TODOS os clientes conectados
+    io.emit('receber-mensagem', { 
+      texto: mensagem,
+      timestamp: new Date().toISOString()
+    });
   });
 
-  // Ouvinte para desconexão
   socket.on('disconnect', (reason) => {
-      console.log(`❌ Precursor ${clientId} desconectado: ${reason}`);
-      console.log(`👥 Usuários conectados: ${io.engine.clientsCount - 1}`);
-  });
-
-  // Ouvinte para erros
-  socket.on('error', (error) => {
-      console.error(`💥 Erro no socket ${clientId}:`, error);
+    console.log(`❌ Um precursor partiu: ${reason}`);
   });
 });
 
-// Middleware para rotas não encontradas
-app.use((req, res) => {
-  res.status(404).json({ 
-    error: 'Rota não encontrada',
-    availableRoutes: ['GET /', 'GET /history', 'DELETE /history']
-  });
-});
-
-// Manipulador de erros global
-app.use((error, req, res, next) => {
-  console.error('💥 Erro não tratado:', error);
-  res.status(500).json({ 
-    error: 'Erro interno do servidor',
-    message: error.message 
-  });
-});
-
-// Inicialização do servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log('='.repeat(50));
-  console.log(`✅ Servidor Souls Chat iniciado com sucesso!`);
-  console.log(`📍 Porta: ${PORT}`);
-  console.log(`🌐 URL: http://localhost:${PORT}`);
-  console.log(`💾 Modo: ${process.env.NODE_ENV || 'development'}`);
-  console.log('='.repeat(50));
+  console.log(`✅ Servidor ouvindo na porta ${PORT}`);
 });
 
-// Graceful shutdown
+// Graceful shutdown - salva o histórico antes de desligar
 process.on('SIGINT', () => {
-  console.log('\n🛑 Desligando servidor gracefulmente...');
-  server.close(() => {
-    console.log('✅ Servidor fechado com sucesso');
-    process.exit(0);
-  });
-});
-
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Recebido SIGTERM, desligando...');
-  server.close(() => {
-    console.log('✅ Servidor fechado com sucesso');
-    process.exit(0);
-  });
+  console.log('\n🛑 Desligando servidor... Salvando histórico');
+  saveHistory(chatHistory);
+  process.exit(0);
 });
