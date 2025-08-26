@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-     <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- PWA METADADOS -->
-    <meta name="theme-color" content="#753">
-    <link rel="manifest" href="/manifest.json">
+    <!-- 🔥 ANTI-CACHE AUTOMÁTICO -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="<?= new Date().toISOString() ?>">
     
     <title>Chat Souls</title>
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-    <style>
+    
+    <!-- Socket.io com timestamp anti-cache -->
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=<?= Date.now() ?>"></script>
         :root {
             --color-bg: #222;
             --color-ui-dark: #111;
@@ -271,6 +274,44 @@
     </div>
 
 <script>
+     // ================== ANTI-CACHE AUTOMÁTICO ==================
+console.log('🔄 Anti-cache ativado', new Date().toLocaleTimeString());
+
+// Force recarregamento se a página veio do cache
+if (performance.navigation.type === 2) {
+    console.log('🔄 Página carregada do cache - recarregando...');
+    window.location.reload(true);
+    return; // Para a execução do resto do código
+}
+
+// Verifica versão para prevenir cache
+const currentVersion = 'v2.0';
+const storedVersion = localStorage.getItem('app_version');
+
+if (storedVersion !== currentVersion) {
+    console.log('🔄 Nova versão detectada - limpando tudo...');
+    localStorage.setItem('app_version', currentVersion);
+    
+    // Limpa TODOS os caches
+    localStorage.removeItem('soulsChatHistory');
+    sessionStorage.clear();
+    
+    // Force reload para garantir
+    window.location.reload(true);
+    return;
+}
+
+// Previne cache do navegador
+window.addEventListener('beforeunload', function() {
+    console.log('🔄 Prevenindo cache...');
+    // Limpa caches temporários
+    sessionStorage.clear();
+});
+
+// ================== CONEXÃO SOCKET ==================
+const serverUrl = 'https://soulschat.onrender.com';
+let socket = null;
+
 // CONFIGURAÇÃO
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
@@ -704,8 +745,65 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
 // Service Worker simples apenas para instalação
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.log);
+// ================== REGISTRO DO SERVICE WORKER ==================
+if ('serviceWorker' in navigator) {
+    // Registra o Service Worker APENAS se não houver problemas
+    navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+            console.log('✅ SW registrado com sucesso:', registration.scope);
+            
+            // Verifica se há updates a cada carga
+            registration.addEventListener('updatefound', () => {
+                console.log('🔄 Nova versão do SW encontrada');
+                registration.update();
+            });
+        })
+        .catch(error => {
+            console.log('⚠️ SW não registrado (pode ser normal):', error);
+            // Não bloqueia o app se o SW falhar
+        });
+}
+
+// Função para limpar SWs se der problema
+function clearServiceWorkers() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(registration => {
+                console.log('🗑️ Removendo SW:', registration.scope);
+                registration.unregister();
+            });
+        });
+    }
+}
+
+// Botão de emergência para limpar SWs
+const clearSWBtn = document.createElement('button');
+clearSWBtn.textContent = '🆘 Limpar SW';
+clearSWBtn.style.cssText = `
+    position: fixed;
+    bottom: 20rem;
+    right: 2rem;
+    background: #ff0000;
+    color: white;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 1000;
+    font-size: 12px;
+`;
+
+clearSWBtn.addEventListener('click', () => {
+    console.log('🆘 Limpando Service Workers...');
+    clearServiceWorkers();
+    setTimeout(() => window.location.reload(true), 1000);
+});
+
+document.body.appendChild(clearSWBtn);
+     
 }
 </script>
 </body>
 </html>
+
 
