@@ -127,52 +127,80 @@
             <select class="dropdown" id="template-1">
                 <option value="">[Modelo]</option>
                 <option value="Cuidado com ****">Cuidado com ****</option>
-                <option value="**** à frente">**** à frente</option>
-                <option value="Inimigo ****">Inimigo ****</option>
-                <option value="Item ****">Item ****</option>
+                <option value="**** adiante">**** adiante</option>
+                <option value="Sem **** à frente">Sem **** à frente</option>
+                <option value="**** Necessário adiante">**** Necessário adiante</option>
+                <option value="Tente ****">Tente ****</option>
+                <option value="Provavel ****">Provavel ****</option>
+                <option value="Primeiro, ****">Primeiro, ****</option>
+                <option value="Busque ****">Busque ****</option>
+                <option value="Ainda sem ****">Ainda sem ****</option>
+                <option value="Por que sempre ****?">Por que sempre ****?</option>
+                <option value="Se eu tivesse ****...">Se eu tivesse ****... </option>
+                <option value="Não esperava ****...">Não esperava ****...</option>
+                <option value="Visões de ****...">Visões de ****...</option>
+                <option value="Poderia ser ****? ">Poderia ser ****? </option>
+                <option value="Hora de ****...">Hora de ****...</option>
+                <option value="**** oh, ****... ">**** oh, ****... </option>
+                <option value="Ofereça ****">Ofereça ****</option>
+                <option value="Louvado seja ****">Louvado seja ****</option>
+                <option value="Que haja ****">Que haja ****</option>
                 <option value="****">****</option>
-                <option value="Avante, ****">Avante, ****</option>
+                <option value="****!">****!</option>
+                <option value="****?">****?</option>
+                <option value="****...">****...</option>
                 <option value="Ahh, ****...">Ahh, ****...</option>
             </select>
             <select class="dropdown" id="word-1">
-                <option value="">[Palavra]</option>
-                <optgroup label="Inimigos">
-                    <option value="cão">cão</option>
-                    <option value="dragão">dragão</option>
-                    <option value="cavaleiro">cavaleiro</option>
-                </optgroup>
-                <optgroup label="Lugares">
-                    <option value="casa">casa</option>
-                    <option value="penhasco">penhasco</option>
-                    <option value="masmorra">masmorra</option>
-                </optgroup>
-                <optgroup label="Conceitos">
-                    <option value="desespero">desespero</option>
-                    <option value="alma">alma</option>
-                    <option value="sorte">sorte</option>
-                </optgroup>
+                <option value="">[Palavras]</option>
+                <!-- Será preenchido automaticamente pelo JavaScript -->
             </select>
         </div>
 
         <div class="menu-section" id="second-line" style="display: none;">
             <select class="dropdown" id="conjunction">
                 <option value="">[Conjunção]</option>
-                <option value="e depois">e depois</option>
-                <option value="mas cuidado com">mas cuidado com</option>
+                <option value="e então">e então</option>
+                <option value="ou">ou</option>
+                <option value="mas">mas</option>
                 <option value="portanto">portanto</option>
-                <option value="ou então">ou então</option>
+                <option value="em suma">em suma</option>
+                <option value="exceto">exceto</option>
+                <option value="A propósito">A propósito</option>
+                <option value="por assim dizer">por assim dizer</option>
+                <option value="ainda mais">ainda mais</option>
+                <option value=",">,</option>
             </select>
             <select class="dropdown" id="template-2">
                 <option value="">[Modelo 2]</option>
+                <option value="Cuidado com ****">Cuidado com ****</option>
+                <option value="**** adiante">**** adiante</option>
+                <option value="Sem **** à frente">Sem **** à frente</option>
+                <option value="**** Necessário adiante">**** Necessário adiante</option>
+                <option value="Tente ****">Tente ****</option>
+                <option value="Provavel ****">Provavel ****</option>
+                <option value="Primeiro, ****">Primeiro, ****</option>
+                <option value="Busque ****">Busque ****</option>
+                <option value="Ainda sem ****">Ainda sem ****</option>
+                <option value="Por que sempre ****?">Por que sempre ****?</option>
+                <option value="Se eu tivesse ****...">Se eu tivesse ****... </option>
+                <option value="Não esperava ****...">Não esperava ****...</option>
+                <option value="Visões de ****...">Visões de ****...</option>
+                <option value="Poderia ser ****? ">Poderia ser ****? </option>
+                <option value="Hora de ****...">Hora de ****...</option>
+                <option value="**** oh, ****... ">**** oh, ****... </option>
+                <option value="Ofereça ****">Ofereça ****</option>
+                <option value="Louvado seja ****">Louvado seja ****</option>
+                <option value="Que haja ****">Que haja ****</option>
                 <option value="****">****</option>
-                <option value="encontre ****">encontre ****</option>
-                <option value="use ****">use ****</option>
+                <option value="****!">****!</option>
+                <option value="****?">****?</option>
+                <option value="****...">****...</option>
+                <option value="Ahh, ****...">Ahh, ****...</option>
             </select>
             <select class="dropdown" id="word-2">
                 <option value="">[Palavra 2]</option>
-                <option value="amigo">amigo</option>
-                <option value="item">item</option>
-                <option value="ataque saltado">ataque saltado</option>
+                <!-- Será preenchido automaticamente pelo JavaScript -->
             </select>
         </div>
 
@@ -197,6 +225,113 @@
     let isTryingToReconnect = false;
     let lastMessageText = '';
     const statusElement = document.getElementById('connection-status');
+
+    // FUNÇÃO PARA PREENCHER DROPDOWNS COM PALAVRAS
+    function preencherDropdownPalavras(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        
+        // Limpa o dropdown (mantém apenas a primeira option)
+        while (dropdown.options.length > 1) {
+            dropdown.remove(1);
+        }
+        
+        // Todas as palavras organizadas por categoria
+        const palavras = {
+            "Inimigos": [
+                "Inimigo", "Inimigo Fraco", "Inimigo Forte", "Monstro", "dragão", "Chefe", "Sentinela", 
+                "Grupo", "Bando", "Chamariz", "Morto-Vivo", "soldado", "cavaleiro", "Cavalheiro", 
+                "Arqueiro", "Atirador", "Mago", "artilharia", "monarca", "demi-humano", "estrangeiro", 
+                "gigante", "cavalo", "cachorro", "lobo", "rato", "fera", "pássaro", "ave de rapina", 
+                "cobra", "carangueijo", "camarão", "polvo", "inseto", "escaravelho", "lesma", "aparição", 
+                "esqueleto", "monstruosidade", "criatura agourenta"
+            ],
+            "Pessoas": [
+                "Maculado", "guerreiro", "espadachim", "cavaleiro", "Samurai", "feiticeiro", "clérigo", 
+                "sábio", "professor", "mestre", "amigo", "amante", "velho querido", "velho maluco", 
+                "anjo", "Bolsa de moedas cheia", "pobre", "boa pessoa", "pessoa perversa", "pessoa gorda", 
+                "pessoa magra", "pessoa adorável", "pessoa patética", "pessoa estranha", "pessoa agil", 
+                "pessoa lenta", "pessoa invisivel", "pessoa gigante", "pescador", "ladrão", "mentiroso", 
+                "covarde", "traidor", "par", "trio", "nobre", "aristocrata", "herói", "campeão", 
+                "monarca", "senhor", "deus"
+            ],
+            "Coisas": [
+                "item", "item necesário", "item precioso", "algo", "algo incrível", "Tesouro", "cadaver", 
+                "caixão", "armadilha", "escudo", "arco", "arma de projétil", "armadura", "talismã", 
+                "habilidade", "feitiçaria", "encantamento", "mapa", "material", "flor", "grama", "árvore", 
+                "fruta", "semente", "cogumelo", "lágrima", "cristal", "borboleta", "inseto", "estrume", 
+                "graça", "porta", "chave", "escada", "alavanca", "elevador", "Nascente de espírito", 
+                "portão de envio", "astrolábio de pedra", "telescopio", "mensagem", "mancha", "Térvore", 
+                "Elden Ring"
+            ],
+            "Tática de Batalha": [
+                "desespero", "Batalha Corpo a Corpo", "Batalha à distancia", "Batalha a cavalo", "atrair", 
+                "Dorrotar um por um", "Derrotando todos de uma vez", "correndo", "furtividade", "mimetismo", 
+                "confusão", "perseguição", "fugindo", "Invocação", "circulando", "pulando", "breve pausa"
+            ],
+            "Ações": [
+                "Atacando", "ataque com salto", "ataque com corrida", "acerto critico", 
+                "segurar com as duas mãos", "bloqueio", "aparando", "contra-ataque", "feitiçaria", 
+                "encantamento", "habilidade", "invocação", "arremessando", "curando", "correndo", 
+                "rolando", "retrocedendo", "pulando", "agachado", "travar a mira", "criação de itens", 
+                "gesticulando"
+            ],
+            "Situações": [
+                "Manhã", "Meio-dia", "Noite", "céu claro", "nublado", "chuva", "tempestade", "névoa", 
+                "neve", "Patrulhando", "procissão", "multidão", "Ataque surpresa", "emboscada", "cercado", 
+                "reduzido a pó", "batalha", "Reforços", "Ritual", "explosão", "local alto", 
+                "local defensável", "local escalável", "local brilhante", "local escura", "área aberta", 
+                "área apertada", "esconderijo", "local de atirar", "local de reconhecimento", "segurança", 
+                "perigo", "vista deslumbrante", "desvio", "caminho oculto", "Passagem secreta", "atalho", 
+                "impasse", "desviando o olhar", "despercebido", "sem vigor"
+            ],
+            "Trajeto": [
+                "Leste", "Oeste", "Sul", "Norte", "adiante", "atrás", "Esquerda", "Direita", "centro", 
+                "em cima", "abaixo", "borda"
+            ],
+            "Partes do corpo": [
+                "cabeça", "estômago", "Costas", "braços", "perna", "garupa", "cauda", "núcleo", "Dedos"
+            ],
+            "Afinidades": [
+                "físico", "padrão", "contundente", "Cortar", "penetrante", "Fogo", "relâmpago", "magia", 
+                "santo", "veneno", "tóxico", "podridão escarlate", "perda de sangue", "geada", "dormir", 
+                "loucura", "morte"
+            ],
+            "Conceitos": [
+                "vida", "Morte", "luz", "escuro", "Estrelas", "Fogo", "Ordem", "caos", "alegria", "ira", 
+                "sofrimento", "tristeza", "confortar", "bem-aventurança", "infortúnio", "boa sorte", "azar", 
+                "esperança", "desespero", "vitória", "derrota", "investigação", "fé", "abundância", 
+                "podridão", "lealdade", "injustiça", "segredo", "oportunidade", "apuro", "pista", "amizade", 
+                "amor", "valentia", "vigor", "firmeza", "confiança", "distraído", "Desprotegido", 
+                "introspecção", "lamentar", "arrependimento", "futilidade", "à beira do abismo", "traição", 
+                "vingança", "destruição", "imprudência", "calma", "vigilância", "tranquilidade", "som", 
+                "lágrimas", "dormir", "profundezidade", "escória", "medo", "sacrifício", "ruína"
+            ],
+            "Frases": [
+                "Boa sorte", "Olhe com atenção", "Ouça com atenção", "Pense com cuidado", "Muito bem", 
+                "Eu fiz isso!", "Eu falhei...", "aqui!", "Aqui não!", "Não se atreva!", "Faça isso!", 
+                "Eu não aguento isso...", "não pense", "tão solitário...", "aqui de novo...", 
+                "apenas começando", "Mantenha a calma", "continue se movendo", "voltar", "desistir", 
+                "Não desista", "Me ajuda...", "Eu não acredito...", "muito alto", "Eu quero ir para casa...", 
+                "é como um sonho...", "parece familiar ...", "bonito...", "você não tem o direito", 
+                "Está pronto?"
+            ]
+        };
+        
+        // Adiciona as palavras ao dropdown
+        for (const [categoria, palavrasArray] of Object.entries(palavras)) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = categoria;
+            
+            palavrasArray.forEach(palavra => {
+                const option = document.createElement('option');
+                option.value = palavra;
+                option.textContent = palavra;
+                optgroup.appendChild(option);
+            });
+            
+            dropdown.appendChild(optgroup);
+        }
+    }
 
     // FUNÇÕES DE ARMAZENAMENTO LOCAL
     function saveChatHistory() {
@@ -427,6 +562,10 @@
 
     // INICIALIZAÇÃO
     window.addEventListener('load', function() {
+        // Preenche os dropdowns de palavras
+        preencherDropdownPalavras('word-1');
+        preencherDropdownPalavras('word-2');
+        
         verificarEstadoNotificacoes();
         connectToServer();
     });
