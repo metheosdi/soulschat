@@ -1,7 +1,8 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { Low, JSONFile } = require('lowdb');
+const { Low } = require('lowdb');
+const { JSONFile } = require('lowdb/node');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,21 +14,23 @@ const io = socketIo(server, {
   }
 });
 
-// Configuração do LowDB
+// Configuração do LowDB - SINTAXE CORRETA
 const adapter = new JSONFile('db.json');
-const db = new Low(adapter);
+const db = new Low(adapter, { messages: [] });
+
+const MAX_HISTORY_LENGTH = 200;
 
 // Inicializar o banco de dados
 async function initializeDB() {
   await db.read();
+  // Garante que db.data.messages existe
   db.data ||= { messages: [] };
+  db.data.messages ||= [];
   await db.write();
   console.log(`Banco de dados inicializado: ${db.data.messages.length} mensagens`);
 }
 
 initializeDB();
-
-const MAX_HISTORY_LENGTH = 200;
 
 // Rota simples de saúde
 app.get('/', (req, res) => {
