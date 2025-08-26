@@ -3,19 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- 🔥 ANTI-CACHE AUTOMÁTICO -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <meta http-equiv="Last-Modified" content="<?= new Date().toISOString() ?>">
-    
     <title>Chat Souls</title>
-    
-    <!-- Socket.io com timestamp anti-cache -->
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js?v=<?= Date.now() ?>"></script>
-    <style>   
-    :root {
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        :root {
             --color-bg: #222;
             --color-ui-dark: #111;
             --color-ui-light: #332;
@@ -275,40 +266,6 @@
     </div>
 
 <script>
-     // ================== ANTI-CACHE AUTOMÁTICO ==================
-console.log('🔄 Anti-cache ativado', new Date().toLocaleTimeString());
-
-// Force recarregamento se a página veio do cache
-if (performance.navigation.type === 2) {
-    console.log('🔄 Página carregada do cache - recarregando...');
-    window.location.reload(true);
-    return; // Para a execução do resto do código
-}
-
-// Verifica versão para prevenir cache
-const currentVersion = 'v2.0';
-const storedVersion = localStorage.getItem('app_version');
-
-if (storedVersion !== currentVersion) {
-    console.log('🔄 Nova versão detectada - limpando tudo...');
-    localStorage.setItem('app_version', currentVersion);
-    
-    // Limpa TODOS os caches
-    localStorage.removeItem('soulsChatHistory');
-    sessionStorage.clear();
-    
-    // Force reload para garantir
-    window.location.reload(true);
-    return;
-}
-
-// Previne cache do navegador
-window.addEventListener('beforeunload', function() {
-    console.log('🔄 Prevenindo cache...');
-    // Limpa caches temporários
-    sessionStorage.clear();
-});
-
 // CONFIGURAÇÃO
 const serverUrl = 'https://soulschat.onrender.com';
 let socket = null;
@@ -683,107 +640,6 @@ document.getElementById('notif-btn').addEventListener('click', () => {
         alert('Seu navegador não suporta notificações');
     }
 });
-    // ================== PWA SIMPLIFICADO ==================
-let deferredPrompt;
-
-// Botão de instalação
-const installButton = document.createElement('button');
-installButton.textContent = '📱 Instalar App';
-installButton.style.cssText = `
-    position: fixed;
-    bottom: 14rem;
-    right: 2rem;
-    background: var(--color-accent);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 1000;
-    display: none;
-    font-size: 12px;
-`;
-document.body.appendChild(installButton);
-
-// Evento de antes de instalar
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installButton.style.display = 'block';
-    
-    // Esconde automaticamente após 10 segundos
-    setTimeout(() => {
-        installButton.style.display = 'none';
-    }, 10000);
-});
-
-// Clique para instalar
-installButton.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-        installButton.style.display = 'none';
-        addSystemMessage('App instalado com sucesso!');
-    }
-    
-    deferredPrompt = null;
-});
-
-// Verifica se já está instalado como PWA
-if (window.matchMedia('(display-mode: standalone)').matches) {
-    console.log('📱 Executando como PWA');
-    document.body.classList.add('pwa-mode');
-}
-
-// Service Worker simples apenas para instalação
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-        .then(registration => {
-            console.log('✅ SW registrado:', registration.scope);
-        })
-        .catch(error => {
-            console.log('⚠️ SW não registrado:', error);
-        });
-}
-
-// Botão de emergência para limpar SWs
-const clearSWBtn = document.createElement('button');
-clearSWBtn.textContent = '🆘 Limpar SW';
-clearSWBtn.style.cssText = `
-    position: fixed;
-    bottom: 20rem;
-    right: 2rem;
-    background: #ff0000;
-    color: white;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 1000;
-    font-size: 12px;
-`;
-
-clearSWBtn.addEventListener('click', () => {
-    console.log('🆘 Limpando Service Workers...');
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-            registrations.forEach(registration => registration.unregister());
-        });
-    }
-    setTimeout(() => window.location.reload(true), 1000);
-});
-
-document.body.appendChild(clearSWBtn);
-     
-}
 </script>
 </body>
 </html>
-
-
-
-
