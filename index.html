@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Souls</title>
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <!-- Manifest PWA -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- Meta tags para PWA -->
+<meta name="theme-color" content="#753">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chat Souls">
+
+<!-- Ícones para iOS -->
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<!-- Meta tags para melhor experiência mobile -->
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
     <style>
         :root {
             --color-bg: #222;
@@ -659,8 +674,75 @@
             alert('Seu navegador não suporta notificações');
         }
     });
+
+    // REGISTRO DO SERVICE WORKER PARA PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js')
+      .then(function(registration) {
+        console.log('ServiceWorker registrado com sucesso: ', registration.scope);
+      })
+      .catch(function(error) {
+        console.log('Falha no registro do ServiceWorker: ', error);
+      });
+  });
+}
+
+// DETECTAR SE ESTÁ INSTALADO COMO PWA
+function checkPWA() {
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('Executando como PWA');
+    document.body.classList.add('pwa-mode');
+  }
+}
+
+// INSTALAÇÃO DO PWA
+let deferredPrompt;
+const installButton = document.createElement('button');
+installButton.textContent = '📱 Instalar App';
+installButton.style.cssText = `
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1000;
+  display: none;
+`;
+
+document.body.appendChild(installButton);
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installButton.style.display = 'block';
+});
+
+installButton.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  
+  if (outcome === 'accepted') {
+    installButton.style.display = 'none';
+  }
+  
+  deferredPrompt = null;
+});
+
+// Verificar modo PWA ao carregar
+checkPWA();
+    
 </script>
 </body>
 </html>
+
 
 
