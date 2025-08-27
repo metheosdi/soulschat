@@ -1,9 +1,6 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { MongoClient, ServerApiVersion } = require('mongodb'); // REMOVA ESTA LINHA SE JÁ EXISTIR
-
-// ✅ LINHA CORRETA - deve aparecer apenas UMA vez
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const app = express();
