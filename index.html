@@ -490,6 +490,9 @@ function connectToServer() {
         statusElement.textContent = '🟢 Conectado';
         statusElement.style.color = 'lightgreen';
         addSystemMessage('Você se conectou ao chat.');
+        
+        // SOLICITAR HISTÓRICO APÓS CONECTAR - MUDANÇA IMPORTANTE!
+        socket.emit('request-history');
     });
 
     socket.on('historico-completo', (historico) => {
