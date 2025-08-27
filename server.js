@@ -14,7 +14,7 @@ const io = socketIo(server, {
 });
 
 // Configuração do MongoDB - SEM SSL
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://renderuser:SoulsChatSecure123@cluster0.jns7pnu.mongodb.net/?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://mongo:nFoweZcLyRhkIAXpZnXyYKGloHKrYCFF@shortline.proxy.rlwy.net:12301';
 
 const client = new MongoClient(MONGODB_URI, {
   serverApi: {
@@ -154,6 +154,7 @@ process.on('SIGINT', async () => {
   await client.close();
   process.exit(0);
 });
+
 
 
 
