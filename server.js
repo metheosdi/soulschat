@@ -13,8 +13,8 @@ const io = socketIo(server, {
   }
 });
 
-// Configuração do MongoDB - VERSÃO CORRIGIDA
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://souls-chat-user:99025593aA%40@cluster0.jns7pnu.mongodb.net/souls-chat?retryWrites=true&w=majority&ssl=true';
+// Configuração do MongoDB - SEM SSL
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://souls-chat-user:gBceFjp9u6WE39@cluster0.jns7pnu.mongodb.net/souls-chat?retryWrites=true&w=majority';
 
 const client = new MongoClient(MONGODB_URI, {
   serverApi: {
@@ -23,7 +23,8 @@ const client = new MongoClient(MONGODB_URI, {
     deprecationErrors: true,
   },
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  ssl: false // ⬅️ SSL DESLIGADO
 });
 
 const MAX_HISTORY_LENGTH = 200;
@@ -153,3 +154,4 @@ process.on('SIGINT', async () => {
   await client.close();
   process.exit(0);
 });
+
