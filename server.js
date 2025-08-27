@@ -1,6 +1,9 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const { MongoClient, ServerApiVersion } = require('mongodb'); // REMOVA ESTA LINHA SE JÁ EXISTIR
+
+// ✅ LINHA CORRETA - deve aparecer apenas UMA vez
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const app = express();
@@ -13,10 +16,8 @@ const io = socketIo(server, {
   }
 });
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
-
 // Configuração do MongoDB - VERSÃO CORRIGIDA
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://souls-chat-user:99025593aA%40@cluster0.jns7pnu.mongodb.net/souls-chat?retryWrites=true&w=majority&ssl=true&tlsAllowInvalidCertificates=false';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://souls-chat-user:99025593aA%40@cluster0.jns7pnu.mongodb.net/souls-chat?retryWrites=true&w=majority&ssl=true';
 
 const client = new MongoClient(MONGODB_URI, {
   serverApi: {
@@ -24,11 +25,8 @@ const client = new MongoClient(MONGODB_URI, {
     strict: true,
     deprecationErrors: true,
   },
-  // ADICIONE ESTAS OPÇÕES:
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  ssl: true,
-  tlsAllowInvalidCertificates: false
+  useUnifiedTopology: true
 });
 
 const MAX_HISTORY_LENGTH = 200;
@@ -158,5 +156,3 @@ process.on('SIGINT', async () => {
   await client.close();
   process.exit(0);
 });
-
-
