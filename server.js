@@ -13,8 +13,9 @@ const io = socketIo(server, {
   }
 });
 
-// Configuração do MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || 'sua-string-de-conexao-aqui';
+// Configuração do MongoDB - VERSÃO CORRIGIDA
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://souls-chat-user:99025593aA%40@cluster0.jns7pnu.mongodb.net/souls-chat?retryWrites=true&w=majority&appName=Cluster0';
+
 const client = new MongoClient(MONGODB_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -150,3 +151,4 @@ process.on('SIGINT', async () => {
   await client.close();
   process.exit(0);
 });
+
