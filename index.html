@@ -480,9 +480,12 @@ function connectToServer() {
         socket.disconnect();
     }
 
-    console.log('Tentando conectar...');
-    isTryingToReconnect = true;
-    socket = io(serverUrl);
+   console.log('Tentando conectar...');
+isTryingToReconnect = true;
+socket = io(serverUrl, {
+  transports: ['websocket', 'polling'],
+  withCredentials: true
+});
 
     socket.on('connect', () => {
         console.log('Conectado!');
@@ -646,3 +649,4 @@ document.getElementById('notif-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
+
