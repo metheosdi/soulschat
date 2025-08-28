@@ -273,6 +273,11 @@ let isTryingToReconnect = false;
 let lastMessageText = '';
 const statusElement = document.getElementById('connection-status');
 
+// Capturador de erros globais
+window.addEventListener('error', function(e) {
+    console.error('Erro global capturado:', e.error);
+});
+
 // FUNÇÃO PARA PREENCHER DROPDOWNS COM PALAVRAS
 function preencherDropdownPalavras(dropdownId) {
     const dropdown = document.getElementById(dropdownId);
@@ -326,7 +331,7 @@ function preencherDropdownPalavras(dropdownId) {
             "Manhã", "Meio-dia", "Noite", "céu claro", "nublado", "chuva", "tempestade", "névoa", 
             "neve", "Patrulhando", "procissão", "multidão", "Ataque surpresa", "emboscada", "cercado", 
             "reduzido a pó", "batalha", "Reforços", "Ritual", "explosão", "local alto", 
-            "local defensável", "local escalável", "local brilhante", "local escura", "área aberta", 
+            "local defensável", "local escalável", "local brilhante", "local escura", "área aperta", 
             "área apertada", "esconderijo", "local de atirar", "local de reconhecimento", "segurança", 
             "perigo", "vista deslumbrante", "desvio", "caminho oculto", "Passagem secreta", "atalho", 
             "impasse", "desviando o olhar", "despercebido", "sem vigor"
@@ -415,6 +420,8 @@ function verificarEstadoNotificacoes() {
             console.log('Solicitando permissão explicitamente...');
             Notification.requestPermission().then(permission => {
                 console.log('Permissão definida como:', permission);
+            }).catch(error => {
+                console.error('Erro ao solicitar permissão:', error);
             });
         }
     } else {
@@ -465,6 +472,8 @@ function mostrarNotificacao(mensagem) {
                 if (permission === 'granted') {
                     mostrarNotificacao(mensagem);
                 }
+            }).catch(error => {
+                console.error('Erro ao solicitar permissão:', error);
             });
         }
     } else {
@@ -480,12 +489,12 @@ function connectToServer() {
         socket.disconnect();
     }
 
-   console.log('Tentando conectar...');
-isTryingToReconnect = true;
-socket = io(serverUrl, {
-  transports: ['websocket', 'polling'],
-  withCredentials: true
-});
+    console.log('Tentando conectar...');
+    isTryingToReconnect = true;
+    socket = io(serverUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true
+    });
 
     socket.on('connect', () => {
         console.log('Conectado!');
@@ -641,6 +650,8 @@ document.getElementById('notif-btn').addEventListener('click', () => {
                 status.style.color = 'orange';
             }
             alert('Status das notificações: ' + permission);
+        }).catch(error => {
+            console.error('Erro ao solicitar permissão:', error);
         });
     } else {
         alert('Seu navegador não suporta notificações');
@@ -649,4 +660,3 @@ document.getElementById('notif-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
-
