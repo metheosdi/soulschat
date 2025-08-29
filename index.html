@@ -525,15 +525,18 @@ function connectToServer() {
         addSystemMessage('Histórico carregado.');
     });
 
-    socket.on('receber-mensagem', (data) => {
-        console.log('Mensagem recebida:', data.texto);
-        addMessageToChat(data.texto, false);
-        
-        // Tenta mostrar notificação com pequeno delay
-        setTimeout(() => {
-            mostrarNotificacao(data.texto);
-        }, 1000);
-    });
+   socket.on('receber-mensagem', (data) => {
+    console.log('Mensagem recebida:', data.texto, 'de:', data.usuario);
+    
+    // Verifica se a mensagem é do próprio usuário
+    const isSelf = data.usuario === socket.user;
+    addMessageToChat(data.texto, data.usuario, isSelf);
+    
+    // Tenta mostrar notificação com pequeno delay
+    setTimeout(() => {
+        mostrarNotificacao(`${data.usuario}: ${data.texto}`);
+    }, 1000);
+});
 
     socket.on('disconnect', (reason) => {
         console.log('Desconectado:', reason);
@@ -606,7 +609,7 @@ function clearForm() {
 }
 
 // GERENCIAMENTO DE CHAT
-function addMessageToChat(text, isSelf = false) {
+function addMessageToChat(text, usuario = 'Sistema', isSelf = false) {
     if (text === lastMessageText) {
         console.log('Mensagem duplicada ignorada:', text);
         return;
@@ -616,7 +619,19 @@ function addMessageToChat(text, isSelf = false) {
     const msgElement = document.createElement('div');
     msgElement.classList.add('message');
     if (isSelf) msgElement.classList.add('self');
-    msgElement.textContent = text;
+    
+    // Adicionar nome do usuário acima da mensagem
+    const userElement = document.createElement('div');
+    userElement.style.fontSize = '0.8em';
+    userElement.style.opacity = '0.7';
+    userElement.style.marginBottom = '0.3rem';
+    userElement.textContent = usuario;
+    
+    const textElement = document.createElement('div');
+    textElement.textContent = text;
+    
+    msgElement.appendChild(userElement);
+    msgElement.appendChild(textElement);
 
     const chatContainer = document.getElementById('chat-container');
     chatContainer.appendChild(msgElement);
@@ -673,5 +688,6 @@ document.getElementById('notif-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
+
 
 
