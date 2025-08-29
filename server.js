@@ -73,21 +73,21 @@ app.get('/', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('🔗 Um precursor se conectou: ' + socket.id);
 
-  // 1. ENVIA O HISTÓRICO COMPLETO para o novo cliente
-  socket.on('request-history', async () => {
-    try {
-      const historico = await messagesCollection
-        .find()
-        .sort({ timestamp: -1 })
-        .limit(MAX_HISTORY_LENGTH)
-        .toArray();
-      
-      socket.emit('historico-completo', historico.map(msg => msg.texto));
-    } catch (error) {
-      console.error('Erro ao buscar histórico:', error);
-      socket.emit('historico-completo', []);
-    }
-  });
+ // 1. ENVIA O HISTÓRICO COMPLETO para o novo cliente
+socket.on('request-history', async () => {
+  try {
+    const historico = await messagesCollection
+      .find()
+      .sort({ timestamp: 1 }) // ⬅️ ALTERADO PARA 1 (ordem crescente)
+      .limit(MAX_HISTORY_LENGTH)
+      .toArray();
+    
+    socket.emit('historico-completo', historico.map(msg => msg.texto));
+  } catch (error) {
+    console.error('Erro ao buscar histórico:', error);
+    socket.emit('historico-completo', []);
+  }
+});
 
   // 2. Ouvinte para mensagens recebidas
   socket.on('enviar-mensagem', async (dados) => {
@@ -154,6 +154,7 @@ process.on('SIGINT', async () => {
   await client.close();
   process.exit(0);
 });
+
 
 
 
