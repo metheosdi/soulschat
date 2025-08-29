@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
 const app = express();
@@ -14,74 +14,97 @@ const io = socketIo(server, {
   }
 });
 
-// Configuração do MongoDB
-const MONGODB_URI = process.env.MONGODB_URI;
+// Configuração do PostgreSQL Neon.tech
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// Credenciais de admin (configure no Railway)
+// Credenciais de admin
 const ADMIN_USER = process.env.ADMIN_USER || 'precursor';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'senha123';
 
-const client = new MongoClient(MONGODB_URI, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  ssl: false
-});
-
 // LIMITES CONFIGURÁVEIS
-const MAX_MESSAGES_PER_USER = 10; // Máximo 10 mensagens por usuário
-const MAX_TOTAL_MESSAGES = 50;     // Máximo 50 mensagens no total
-const MESSAGE_COOLDOWN = 30000;    // 30 segundos entre mensagens
+const MAX_MESSAGES_PER_USER = 10;
+const MAX_TOTAL_MESSAGES = 50;
+const MESSAGE_COOLDOWN = 30000;
 
-let db, messagesCollection, usersCollection;
 const userCooldowns = new Map();
 
-// Conectar ao MongoDB
-async function connectToMongoDB() {
+// Inicializar banco de dados
+async function initDatabase() {
   try {
-    await client.connect();
-    db = client.db('souls-chat');
-    messagesCollection = db.collection('messages');
-    usersCollection = db.collection('users');
+    // Criar tabelas se não existirem
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
+        message_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        texto TEXT NOT NULL,
+        usuario VARCHAR(50) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_messages_usuario ON messages(usuario);
+    `);
+
+    // Criar usuário admin se não existir
+    const adminExists = await pool.query(
+      'SELECT id FROM users WHERE username = $1', 
+      [ADMIN_USER]
+    );
     
-    // Criar índices
-    await messagesCollection.createIndex({ timestamp: 1 });
-    await usersCollection.createIndex({ username: 1 }, { unique: true });
-    
-    // Criar usuário admin inicial se não existir
-    await createAdminUser();
-    
-    console.log('✅ Conectado ao MongoDB');
+    if (adminExists.rows.length === 0) {
+      const hashedPassword = await bcrypt.hash(ADMIN_PASS, 10);
+      await pool.query(
+        'INSERT INTO users (username, password, is_admin) VALUES ($1, $2, $3)',
+        [ADMIN_USER, hashedPassword, true]
+      );
+      console.log('👑 Usuário admin criado');
+    }
+
+    console.log('✅ Banco de dados inicializado');
   } catch (error) {
-    console.error('❌ Erro ao conectar ao MongoDB:', error);
+    console.error('❌ Erro ao inicializar banco:', error);
     process.exit(1);
   }
 }
 
-// Criar usuário admin
-async function createAdminUser() {
+// Autenticar usuário
+async function authenticateUser(username, password) {
   try {
-    const existingAdmin = await usersCollection.findOne({ username: ADMIN_USER });
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash(ADMIN_PASS, 10);
-      await usersCollection.insertOne({
-        username: ADMIN_USER,
-        password: hashedPassword,
-        isAdmin: true,
-        createdAt: new Date()
-      });
-      console.log('👑 Usuário admin criado');
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE username = $1', 
+      [username]
+    );
+    
+    if (userResult.rows.length === 0) {
+      // Auto-criação de usuário
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await pool.query(
+        'INSERT INTO users (username, password) VALUES ($1, $2)',
+        [username, hashedPassword]
+      );
+      return true;
     }
+    
+    const user = userResult.rows[0];
+    return await bcrypt.compare(password, user.password);
   } catch (error) {
-    console.error('Erro ao criar usuário admin:', error);
+    console.error('Erro na autenticação:', error);
+    return false;
   }
 }
 
-// Middleware para verificar autenticação
+// Middleware de autenticação
 function requireAuth(socket, next) {
   const { username, password } = socket.handshake.auth;
   
@@ -101,29 +124,6 @@ function requireAuth(socket, next) {
     .catch(next);
 }
 
-// Autenticar usuário
-async function authenticateUser(username, password) {
-  try {
-    const user = await usersCollection.findOne({ username });
-    if (!user) {
-      // Auto-criação de usuário (sem ser admin)
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await usersCollection.insertOne({
-        username,
-        password: hashedPassword,
-        isAdmin: false,
-        createdAt: new Date(),
-        messageCount: 0
-      });
-      return true;
-    }
-    return await bcrypt.compare(password, user.password);
-  } catch (error) {
-    console.error('Erro na autenticação:', error);
-    return false;
-  }
-}
-
 // Verificar cooldown
 function checkCooldown(username) {
   const lastMessageTime = userCooldowns.get(username);
@@ -133,51 +133,43 @@ function checkCooldown(username) {
   return 0;
 }
 
-// Rota simples de saúde
+// Rotas HTTP
 app.get('/', async (req, res) => {
   try {
-    const messageCount = await messagesCollection.countDocuments();
-    const userCount = await usersCollection.countDocuments();
+    const messagesResult = await pool.query('SELECT COUNT(*) FROM messages');
+    const usersResult = await pool.query('SELECT COUNT(*) FROM users');
     
     res.json({ 
       message: '✅ Servidor do Chat Souls está online!',
-      messageCount,
-      userCount,
-      limits: {
-        maxMessagesPerUser: MAX_MESSAGES_PER_USER,
-        maxTotalMessages: MAX_TOTAL_MESSAGES,
-        cooldown: MESSAGE_COOLDOWN / 1000 + ' segundos'
-      }
+      messageCount: messagesResult.rows[0].count,
+      userCount: usersResult.rows[0].count,
+      database: 'PostgreSQL Neon.tech'
     });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao acessar o banco' });
   }
 });
 
-// Lógica principal de conexão e chat
+// Socket.IO
 io.use(requireAuth).on('connection', (socket) => {
   console.log(`🔗 Precursor ${socket.user} se conectou`);
 
-  // 1. ENVIA O HISTÓRICO COMPLETO
+  // Enviar histórico
   socket.on('request-history', async () => {
     try {
-      const historico = await messagesCollection
-        .find()
-        .sort({ timestamp: 1 })
-        .limit(MAX_TOTAL_MESSAGES)
-        .toArray();
+      const result = await pool.query(
+        'SELECT texto, usuario FROM messages ORDER BY timestamp ASC LIMIT $1',
+        [MAX_TOTAL_MESSAGES]
+      );
       
-      socket.emit('historico-completo', historico.map(msg => ({
-        texto: msg.texto,
-        usuario: msg.usuario
-      })));
+      socket.emit('historico-completo', result.rows);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
       socket.emit('historico-completo', []);
     }
   });
 
-  // 2. Ouvinte para mensagens recebidas
+  // Receber mensagem
   socket.on('enviar-mensagem', async (dados) => {
     const cooldownRemaining = checkCooldown(socket.user);
     if (cooldownRemaining > 0) {
@@ -196,12 +188,13 @@ io.use(requireAuth).on('connection', (socket) => {
       return;
     }
 
-    // Verificar limite de mensagens do usuário
-    const userMessageCount = await messagesCollection.countDocuments({ 
-      usuario: socket.user 
-    });
+    // Verificar limite do usuário
+    const userCountResult = await pool.query(
+      'SELECT COUNT(*) FROM messages WHERE usuario = $1',
+      [socket.user]
+    );
     
-    if (userMessageCount >= MAX_MESSAGES_PER_USER) {
+    if (parseInt(userCountResult.rows[0].count) >= MAX_MESSAGES_PER_USER) {
       socket.emit('erro-mensagem', {
         tipo: 'limite',
         mensagem: `Limite de ${MAX_MESSAGES_PER_USER} mensagens atingido`
@@ -209,34 +202,34 @@ io.use(requireAuth).on('connection', (socket) => {
       return;
     }
 
-    const mensagem = {
-      texto: dados.texto.trim(),
-      usuario: socket.user,
-      timestamp: new Date()
-    };
-
     try {
-      // Adiciona a nova mensagem
-      await messagesCollection.insertOne(mensagem);
+      // Inserir mensagem
+      await pool.query(
+        'INSERT INTO messages (texto, usuario) VALUES ($1, $2)',
+        [dados.texto.trim(), socket.user]
+      );
+      
       userCooldowns.set(socket.user, Date.now());
 
-      // Limitar total de mensagens (mais antigas primeiro)
-      const totalCount = await messagesCollection.countDocuments();
+      // Limitar total de mensagens
+      const totalCountResult = await pool.query('SELECT COUNT(*) FROM messages');
+      const totalCount = parseInt(totalCountResult.rows[0].count);
+      
       if (totalCount > MAX_TOTAL_MESSAGES) {
-        const oldestMessages = await messagesCollection
-          .find()
-          .sort({ timestamp: 1 })
-          .limit(totalCount - MAX_TOTAL_MESSAGES)
-          .toArray();
-        
-        const idsToRemove = oldestMessages.map(msg => msg._id);
-        await messagesCollection.deleteMany({ _id: { $in: idsToRemove } });
+        await pool.query(`
+          DELETE FROM messages 
+          WHERE id IN (
+            SELECT id FROM messages 
+            ORDER BY timestamp ASC 
+            LIMIT $1
+          )
+        `, [totalCount - MAX_TOTAL_MESSAGES]);
       }
 
-      // Repassa a mensagem para TODOS
+      // Broadcast da mensagem
       io.emit('receber-mensagem', { 
-        texto: mensagem.texto,
-        usuario: mensagem.usuario
+        texto: dados.texto.trim(),
+        usuario: socket.user
       });
     } catch (error) {
       console.error('Erro ao salvar mensagem:', error);
@@ -247,17 +240,17 @@ io.use(requireAuth).on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', (reason) => {
-    console.log(`❌ Precursor ${socket.user} partiu: ${reason}`);
+  socket.on('disconnect', () => {
+    console.log(`❌ Precursor ${socket.user} partiu`);
     userCooldowns.delete(socket.user);
   });
 });
 
-// Inicializar servidor
+// Iniciar servidor
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
-  await connectToMongoDB();
+  await initDatabase();
   
   server.listen(PORT, () => {
     console.log(`✅ Servidor ouvindo na porta ${PORT}`);
@@ -271,6 +264,6 @@ startServer();
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Desligando servidor...');
-  await client.close();
+  await pool.end();
   process.exit(0);
 });
