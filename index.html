@@ -349,7 +349,7 @@ function preencherDropdownPalavras(dropdownId) {
             "loucura", "morte"
         ],
         "Conceitos": [
-            "vida", "Morte", "luz", "escuro", "Estrelas", "Fogo", "Ordem", "caos", "alegria", "ira", 
+            "vida", "Morte", "lux", "escuro", "Estrelas", "Fogo", "Ordem", "caos", "alegria", "ira", 
             "sofrimento", "tristeza", "confortar", "bem-aventurança", "infortúnio", "boa sorte", "azar", 
             "esperança", "desespero", "vitória", "derrota", "investigação", "fé", "abundância", 
             "podridão", "lealdade", "injustiça", "segredo", "oportunidade", "apuro", "pista", "amizade", 
@@ -480,33 +480,27 @@ function mostrarNotificacao(mensagem) {
         console.log('Notificação não mostrada: janela está em foco');
     }
 }
-// Função de login
-function fazerLogin() {
-  const username = prompt('Nome do Precursor:') || 'Viajante';
-  const password = prompt('Senha da Lousa:') || 'senha';
-  
-  socket = io(serverUrl, {
-    auth: { username, password },
-    transports: ['websocket', 'polling'],
-    withCredentials: true
-  });
-  
-  setupSocketEvents();
-}
-    
-// CONEXÃO COM SERVIDOR
+
+// CONEXÃO COM SERVIDOR COM AUTENTICAÇÃO
 function connectToServer() {
+    // Solicitar login primeiro
+    const username = prompt('Nome do Precursor:') || 'Viajante';
+    const password = prompt('Senha da Lousa:') || 'senha';
+    
     if (socket?.connected) return;
     if (socket) {
         socket.removeAllListeners();
         socket.disconnect();
     }
 
-    console.log('Tentando conectar...');
+    console.log('Tentando conectar com autenticação...');
     isTryingToReconnect = true;
+    
+    // Conexão com autenticação
     socket = io(serverUrl, {
-      transports: ['websocket', 'polling'],
-      withCredentials: true
+        auth: { username, password },
+        transports: ['websocket', 'polling'],
+        withCredentials: true
     });
 
     socket.on('connect', () => {
@@ -514,19 +508,19 @@ function connectToServer() {
         isTryingToReconnect = false;
         statusElement.textContent = '🟢 Conectado';
         statusElement.style.color = 'lightgreen';
-        addSystemMessage('Você se conectou ao chat.');
+        addSystemMessage(`Bem-vindo, ${username}. Use a lousa para deixar sua mensagem.`);
         
-        // SOLICITAR HISTÓRICO APÓS CONECTAR - MUDANÇA IMPORTANTE!
+        // Solicitar histórico após conectar
         socket.emit('request-history');
     });
 
     socket.on('historico-completo', (historico) => {
         console.log('Histórico recebido:', historico);
         const chatContainer = document.getElementById('chat-container');
-        chatContainer.innerHTML = '<div class="message system-msg">Bem-vindo, Precursor. Use a lousa para deixar sua mensagem.</div>';
+        chatContainer.innerHTML = '<div class="message system-msg">Carregando mensagens dos precursores...</div>';
         
         historico.forEach(msg => {
-            addMessageToChat(msg, false);
+            addMessageToChat(msg.texto, false);
         });
         addSystemMessage('Histórico carregado.');
     });
@@ -551,8 +545,14 @@ function connectToServer() {
 
     socket.on('connect_error', (error) => {
         console.error('Erro de conexão:', error);
-        addSystemMessage('Falha ao conectar.');
+        addSystemMessage('Falha ao conectar. Verifique suas credenciais.');
         if (!isTryingToReconnect) setTimeout(connectToServer, 3000);
+    });
+
+    // Ouvinte para erros de autenticação
+    socket.on('connect_failed', (error) => {
+        console.error('Falha na autenticação:', error);
+        addSystemMessage('Credenciais inválidas. Tente novamente.');
     });
 }
 
@@ -673,4 +673,5 @@ document.getElementById('notif-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
+
 
