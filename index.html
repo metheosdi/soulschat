@@ -521,15 +521,18 @@ function connectToServer() {
     });
 
     socket.on('historico-completo', (historico) => {
-        console.log('Histórico recebido:', historico);
-        const chatContainer = document.getElementById('chat-container');
-        chatContainer.innerHTML = '<div class="message system-msg">Carregando mensagens dos precursores...</div>';
-        
-        historico.forEach(msg => {
-            addMessageToChat(msg.texto, false);
-        });
-        addSystemMessage('Histórico carregado.');
+    console.log('Histórico recebido:', historico);
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.innerHTML = '<div class="message system-msg">Carregando mensagens dos precursores...</div>';
+    
+    historico.forEach(msg => {
+        // Se a mensagem for antiga (sem campo usuario), usa "Viajante Desconhecido"
+        const usuario = msg.usuario || 'Viajante Desconhecido';
+        const isSelf = usuario === socket.user;
+        addMessageToChat(msg.texto, usuario, isSelf);
     });
+    addSystemMessage('Histórico carregado.');
+});
 
    socket.on('receber-mensagem', (data) => {
     console.log('Mensagem recebida:', data.texto, 'de:', data.usuario);
@@ -694,6 +697,7 @@ document.getElementById('notif-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
+
 
 
 
