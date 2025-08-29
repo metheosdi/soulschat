@@ -8,14 +8,14 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
- 
+}
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
     "mongodb": "^5.7.0",
     "bcryptjs": "^2.4.3"
   }
-
+}
   "engines": {
     "node": ">=16.0.0"
   },
@@ -29,4 +29,5 @@
   "author": "Seu Nome",
   "license": "MIT"
 }
+
 
