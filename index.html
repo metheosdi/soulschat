@@ -480,7 +480,20 @@ function mostrarNotificacao(mensagem) {
         console.log('Notificação não mostrada: janela está em foco');
     }
 }
-
+// Função de login
+function fazerLogin() {
+  const username = prompt('Nome do Precursor:') || 'Viajante';
+  const password = prompt('Senha da Lousa:') || 'senha';
+  
+  socket = io(serverUrl, {
+    auth: { username, password },
+    transports: ['websocket', 'polling'],
+    withCredentials: true
+  });
+  
+  setupSocketEvents();
+}
+    
 // CONEXÃO COM SERVIDOR
 function connectToServer() {
     if (socket?.connected) return;
@@ -660,3 +673,4 @@ document.getElementById('notif-btn').addEventListener('click', () => {
 </script>
 </body>
 </html>
+
