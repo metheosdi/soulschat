@@ -602,8 +602,25 @@ function enviarMensagem() {
         return;
     }
 
-    let msg = t1.replace('****', w1);
-    if (conj && t2 && w2) msg += ` ${conj} ${t2.replace('****', w2)}`;
+    // TRATAMENTO ESPECIAL para o template "**** oh, ****..."
+    let msg;
+    if (t1 === "**** oh, ****... ") {
+        // Repete a mesma palavra nos dois lugares
+        msg = t1.replace(/\*\*\*\*/g, w1); // Substitui TODOS os ****
+    } else {
+        // Comportamento normal
+        msg = t1.replace('****', w1);
+    }
+
+    if (conj && t2 && w2) {
+        // Também trata template especial na segunda linha
+        if (t2 === "**** oh, ****... ") {
+            msg += ` ${conj} ${t2.replace(/\*\*\*\*/g, w2)}`;
+        } else {
+            msg += ` ${conj} ${t2.replace('****', w2)}`;
+        }
+    }
+    
     if (gesto) msg += ` ${gesto}`;
 
     if (socket && socket.connected) {
@@ -742,6 +759,7 @@ installBtn.addEventListener('click', () => {
 });</script>
 </body>
 </html>
+
 
 
 
