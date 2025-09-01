@@ -170,75 +170,85 @@ io.use(requireAuth).on('connection', (socket) => {
   });
 
   // Receber mensagem
-  socket.on('enviar-mensagem', async (dados) => {
+socket.on('enviar-mensagem', async (dados) => {
     const cooldownRemaining = checkCooldown(socket.user);
     if (cooldownRemaining > 0) {
-      socket.emit('erro-mensagem', {
-        tipo: 'cooldown',
-        mensagem: `Aguarde ${Math.ceil(cooldownRemaining / 1000)} segundos`
-      });
-      return;
+        socket.emit('erro-mensagem', {
+            tipo: 'cooldown',
+            mensagem: `Aguarde ${Math.ceil(cooldownRemaining / 1000)} segundos`
+        });
+        return;
     }
 
     if (!dados.texto || dados.texto.trim() === '') {
-      socket.emit('erro-mensagem', {
-        tipo: 'vazia',
-        mensagem: 'Mensagem vazia'
-      });
-      return;
-    }
-
-    // Verificar limite do usuário
-    const userCountResult = await pool.query(
-      'SELECT COUNT(*) FROM messages WHERE usuario = $1',
-      [socket.user]
-    );
-    
-    if (parseInt(userCountResult.rows[0].count) >= MAX_MESSAGES_PER_USER) {
-      socket.emit('erro-mensagem', {
-        tipo: 'limite',
-        mensagem: `Limite de ${MAX_MESSAGES_PER_USER} mensagens atingido`
-      });
-      return;
+        socket.emit('erro-mensagem', {
+            tipo: 'vazia',
+            mensagem: 'Mensagem vazia'
+        });
+        return;
     }
 
     try {
-      // Inserir mensagem
-      await pool.query(
-        'INSERT INTO messages (texto, usuario) VALUES ($1, $2)',
-        [dados.texto.trim(), socket.user]
-      );
-      
-      userCooldowns.set(socket.user, Date.now());
+        // VERIFICAR E APAGAR MENSAGEM MAIS ANTIGA DO USUÁRIO
+        const userCountResult = await pool.query(
+            'SELECT COUNT(*) FROM messages WHERE usuario = $1',
+            [socket.user]
+        );
 
-      // Limitar total de mensagens
-      const totalCountResult = await pool.query('SELECT COUNT(*) FROM messages');
-      const totalCount = parseInt(totalCountResult.rows[0].count);
-      
-      if (totalCount > MAX_TOTAL_MESSAGES) {
-        await pool.query(`
-          DELETE FROM messages 
-          WHERE id IN (
-            SELECT id FROM messages 
-            ORDER BY timestamp ASC 
-            LIMIT $1
-          )
-        `, [totalCount - MAX_TOTAL_MESSAGES]);
-      }
+        if (parseInt(userCountResult.rows[0].count) >= MAX_MESSAGES_PER_USER) {
+            // Apaga a mensagem mais antiga do usuário
+            await pool.query(`
+                DELETE FROM messages 
+                WHERE id = (
+                    SELECT id FROM messages 
+                    WHERE usuario = $1 
+                    ORDER BY timestamp ASC 
+                    LIMIT 1
+                )
+            `, [socket.user]);
+            
+            console.log(`🗑️ Mensagem mais antiga de ${socket.user} foi apagada`);
+        }
 
-      // Broadcast da mensagem
-      io.emit('receber-mensagem', { 
-        texto: dados.texto.trim(),
-        usuario: socket.user
-      });
+        // INSERIR NOVA MENSAGEM
+        await pool.query(
+            'INSERT INTO messages (texto, usuario) VALUES ($1, $2)',
+            [dados.texto.trim(), socket.user]
+        );
+        
+        userCooldowns.set(socket.user, Date.now());
+
+        // LIMITAR TOTAL DE MENSAGENS (apaga as mais antigas do sistema)
+        const totalCountResult = await pool.query('SELECT COUNT(*) FROM messages');
+        const totalCount = parseInt(totalCountResult.rows[0].count);
+        
+        if (totalCount > MAX_TOTAL_MESSAGES) {
+            await pool.query(`
+                DELETE FROM messages 
+                WHERE id IN (
+                    SELECT id FROM messages 
+                    ORDER BY timestamp ASC 
+                    LIMIT $1
+                )
+            `, [totalCount - MAX_TOTAL_MESSAGES]);
+            
+            console.log(`🗑️ ${totalCount - MAX_TOTAL_MESSAGES} mensagens antigas apagadas`);
+        }
+
+        // BROADCAST DA NOVA MENSAGEM
+        io.emit('receber-mensagem', { 
+            texto: dados.texto.trim(),
+            usuario: socket.user
+        });
+        
     } catch (error) {
-      console.error('Erro ao salvar mensagem:', error);
-      socket.emit('erro-mensagem', {
-        tipo: 'erro',
-        mensagem: 'Erro interno do servidor'
-      });
+        console.error('Erro ao salvar mensagem:', error);
+        socket.emit('erro-mensagem', {
+            tipo: 'erro',
+            mensagem: 'Erro interno do servidor'
+        });
     }
-  });
+});
 
   socket.on('disconnect', () => {
     console.log(`❌ Precursor ${socket.user} partiu`);
@@ -267,3 +277,4 @@ process.on('SIGINT', async () => {
   await pool.end();
   process.exit(0);
 });
+
