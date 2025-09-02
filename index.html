@@ -591,16 +591,6 @@ function connectToServer() {
         mostrarNotificacao(data.texto, data.usuario);
     }, 1000);
 });
-    
-    // Verifica se a mensagem é do próprio usuário
-    const isSelf = data.usuario === socket.user;
-    addMessageToChat(data.texto, data.usuario, isSelf);
-    
-    // Tenta mostrar notificação com pequeno delay
-    setTimeout(() => {
-        mostrarNotificacao(`${data.usuario}: ${data.texto}`);
-    }, 1000);
-});
 
     socket.on('disconnect', (reason) => {
         console.log('Desconectado:', reason);
@@ -845,6 +835,7 @@ installBtn.addEventListener('click', () => {
 });</script>
 </body>
 </html>
+
 
 
 
