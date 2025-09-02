@@ -44,18 +44,20 @@ async function initDatabase() {
         message_count INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        texto TEXT NOT NULL,
+        usuario VARCHAR(50) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
       CREATE TABLE IF NOT EXISTS votos (
         id SERIAL PRIMARY KEY,
         mensagem_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
         usuario VARCHAR(50) NOT NULL,
         tipo_voto VARCHAR(10) CHECK (tipo_voto IN ('elogio', 'critica')),
         UNIQUE(mensagem_id, usuario)
-    );
-      CREATE TABLE IF NOT EXISTS messages (
-        id SERIAL PRIMARY KEY,
-        texto TEXT NOT NULL,
-        usuario VARCHAR(50) NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
@@ -140,65 +142,6 @@ function checkCooldown(username) {
   return 0;
 }
 
-// Ouvinte para votos
-socket.on('votar-mensagem', async (dados) => {
-    try {
-        // Verificar se usuário já votou nesta mensagem
-        const votoExistente = await pool.query(
-            'SELECT id FROM votos WHERE mensagem_id = $1 AND usuario = $2',
-            [dados.mensagemId, socket.user]
-        );
-
-        if (votoExistente.rows.length > 0) {
-            // Atualizar voto existente
-            await pool.query(
-                'UPDATE votos SET tipo_voto = $1 WHERE id = $2',
-                [dados.tipoVoto, votoExistente.rows[0].id]
-            );
-        } else {
-            // Inserir novo voto
-            await pool.query(
-                'INSERT INTO votos (mensagem_id, usuario, tipo_voto) VALUES ($1, $2, $3)',
-                [dados.mensagemId, socket.user, dados.tipoVoto]
-            );
-        }
-
-        // Buscar contagem atualizada
-        const contagem = await pool.query(`
-            SELECT 
-                SUM(CASE WHEN tipo_voto = 'elogio' THEN 1 ELSE 0 END) as elogios,
-                SUM(CASE WHEN tipo_voto = 'critica' THEN 1 ELSE 0 END) as criticas
-            FROM votos 
-            WHERE mensagem_id = $1
-        `, [dados.mensagemId]);
-
-        // Enviar contagem atualizada para todos
-        io.emit('atualizar-votos', {
-            mensagemId: dados.mensagemId,
-            elogios: parseInt(contagem.rows[0].elogios) || 0,
-            criticas: parseInt(contagem.rows[0].criticas) || 0
-        });
-
-    } catch (error) {
-        console.error('Erro ao processar voto:', error);
-    }
-});
-
-// Após inserir a mensagem, retorne o ID
-const result = await pool.query(
-    'INSERT INTO messages (texto, usuario) VALUES ($1, $2) RETURNING id',
-    [dados.texto.trim(), socket.user]
-);
-
-const mensagemId = result.rows[0].id;
-
-// Enviar mensagem com ID para todos
-io.emit('receber-mensagem', { 
-    texto: dados.texto.trim(),
-    usuario: socket.user,
-    mensagemId: mensagemId  // ← AGORA COM ID!
-});
-
 // Rotas HTTP
 app.get('/', async (req, res) => {
   try {
@@ -235,86 +178,133 @@ io.use(requireAuth).on('connection', (socket) => {
     }
   });
 
+  // Ouvinte para votos
+  socket.on('votar-mensagem', async (dados) => {
+    try {
+      // Verificar se usuário já votou nesta mensagem
+      const votoExistente = await pool.query(
+        'SELECT id FROM votos WHERE mensagem_id = $1 AND usuario = $2',
+        [dados.mensagemId, socket.user]
+      );
+
+      if (votoExistente.rows.length > 0) {
+        // Atualizar voto existente
+        await pool.query(
+          'UPDATE votos SET tipo_voto = $1 WHERE id = $2',
+          [dados.tipoVoto, votoExistente.rows[0].id]
+        );
+      } else {
+        // Inserir novo voto
+        await pool.query(
+          'INSERT INTO votos (mensagem_id, usuario, tipo_voto) VALUES ($1, $2, $3)',
+          [dados.mensagemId, socket.user, dados.tipoVoto]
+        );
+      }
+
+      // Buscar contagem atualizada
+      const contagem = await pool.query(`
+        SELECT 
+          SUM(CASE WHEN tipo_voto = 'elogio' THEN 1 ELSE 0 END) as elogios,
+          SUM(CASE WHEN tipo_voto = 'critica' THEN 1 ELSE 0 END) as criticas
+        FROM votos 
+        WHERE mensagem_id = $1
+      `, [dados.mensagemId]);
+
+      // Enviar contagem atualizada para todos
+      io.emit('atualizar-votos', {
+        mensagemId: dados.mensagemId,
+        elogios: parseInt(contagem.rows[0].elogios) || 0,
+        criticas: parseInt(contagem.rows[0].criticas) || 0
+      });
+
+    } catch (error) {
+      console.error('Erro ao processar voto:', error);
+    }
+  });
+
   // Receber mensagem
-socket.on('enviar-mensagem', async (dados) => {
+  socket.on('enviar-mensagem', async (dados) => {
     const cooldownRemaining = checkCooldown(socket.user);
     if (cooldownRemaining > 0) {
-        socket.emit('erro-mensagem', {
-            tipo: 'cooldown',
-            mensagem: `Aguarde ${Math.ceil(cooldownRemaining / 1000)} segundos`
-        });
-        return;
+      socket.emit('erro-mensagem', {
+        tipo: 'cooldown',
+        mensagem: `Aguarde ${Math.ceil(cooldownRemaining / 1000)} segundos`
+      });
+      return;
     }
 
     if (!dados.texto || dados.texto.trim() === '') {
-        socket.emit('erro-mensagem', {
-            tipo: 'vazia',
-            mensagem: 'Mensagem vazia'
-        });
-        return;
+      socket.emit('erro-mensagem', {
+        tipo: 'vazia',
+        mensagem: 'Mensagem vazia'
+      });
+      return;
     }
 
     try {
-        // VERIFICAR E APAGAR MENSAGEM MAIS ANTIGA DO USUÁRIO
-        const userCountResult = await pool.query(
-            'SELECT COUNT(*) FROM messages WHERE usuario = $1',
-            [socket.user]
-        );
+      // VERIFICAR E APAGAR MENSAGEM MAIS ANTIGA DO USUÁRIO
+      const userCountResult = await pool.query(
+        'SELECT COUNT(*) FROM messages WHERE usuario = $1',
+        [socket.user]
+      );
 
-        if (parseInt(userCountResult.rows[0].count) >= MAX_MESSAGES_PER_USER) {
-            // Apaga a mensagem mais antiga do usuário
-            await pool.query(`
-                DELETE FROM messages 
-                WHERE id = (
-                    SELECT id FROM messages 
-                    WHERE usuario = $1 
-                    ORDER BY timestamp ASC 
-                    LIMIT 1
-                )
-            `, [socket.user]);
-            
-            console.log(`🗑️ Mensagem mais antiga de ${socket.user} foi apagada`);
-        }
-
-        // INSERIR NOVA MENSAGEM
-        await pool.query(
-            'INSERT INTO messages (texto, usuario) VALUES ($1, $2)',
-            [dados.texto.trim(), socket.user]
-        );
+      if (parseInt(userCountResult.rows[0].count) >= MAX_MESSAGES_PER_USER) {
+        // Apaga a mensagem mais antiga do usuário
+        await pool.query(`
+          DELETE FROM messages 
+          WHERE id = (
+            SELECT id FROM messages 
+            WHERE usuario = $1 
+            ORDER BY timestamp ASC 
+            LIMIT 1
+          )
+        `, [socket.user]);
         
-        userCooldowns.set(socket.user, Date.now());
+        console.log(`🗑️ Mensagem mais antiga de ${socket.user} foi apagada`);
+      }
 
-        // LIMITAR TOTAL DE MENSAGENS (apaga as mais antigas do sistema)
-        const totalCountResult = await pool.query('SELECT COUNT(*) FROM messages');
-        const totalCount = parseInt(totalCountResult.rows[0].count);
-        
-        if (totalCount > MAX_TOTAL_MESSAGES) {
-            await pool.query(`
-                DELETE FROM messages 
-                WHERE id IN (
-                    SELECT id FROM messages 
-                    ORDER BY timestamp ASC 
-                    LIMIT $1
-                )
-            `, [totalCount - MAX_TOTAL_MESSAGES]);
-            
-            console.log(`🗑️ ${totalCount - MAX_TOTAL_MESSAGES} mensagens antigas apagadas`);
-        }
+      // INSERIR NOVA MENSAGEM E RETORNAR ID
+      const result = await pool.query(
+        'INSERT INTO messages (texto, usuario) VALUES ($1, $2) RETURNING id',
+        [dados.texto.trim(), socket.user]
+      );
 
-        // BROADCAST DA NOVA MENSAGEM
-        io.emit('receber-mensagem', { 
-            texto: dados.texto.trim(),
-            usuario: socket.user
-        });
+      const mensagemId = result.rows[0].id;
+      
+      userCooldowns.set(socket.user, Date.now());
+
+      // LIMITAR TOTAL DE MENSAGENS (apaga as mais antigas do sistema)
+      const totalCountResult = await pool.query('SELECT COUNT(*) FROM messages');
+      const totalCount = parseInt(totalCountResult.rows[0].count);
+      
+      if (totalCount > MAX_TOTAL_MESSAGES) {
+        await pool.query(`
+          DELETE FROM messages 
+          WHERE id IN (
+            SELECT id FROM messages 
+            ORDER BY timestamp ASC 
+            LIMIT $1
+          )
+        `, [totalCount - MAX_TOTAL_MESSAGES]);
         
+        console.log(`🗑️ ${totalCount - MAX_TOTAL_MESSAGES} mensagens antigas apagadas`);
+      }
+
+      // BROADCAST DA NOVA MENSAGEM COM ID
+      io.emit('receber-mensagem', { 
+        texto: dados.texto.trim(),
+        usuario: socket.user,
+        mensagemId: mensagemId
+      });
+      
     } catch (error) {
-        console.error('Erro ao salvar mensagem:', error);
-        socket.emit('erro-mensagem', {
-            tipo: 'erro',
-            mensagem: 'Erro interno do servidor'
-        });
+      console.error('Erro ao salvar mensagem:', error);
+      socket.emit('erro-mensagem', {
+        tipo: 'erro',
+        mensagem: 'Erro interno do servidor'
+      });
     }
-});
+  });
 
   socket.on('disconnect', () => {
     console.log(`❌ Precursor ${socket.user} partiu`);
@@ -343,6 +333,3 @@ process.on('SIGINT', async () => {
   await pool.end();
   process.exit(0);
 });
-
-
-
