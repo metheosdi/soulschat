@@ -139,6 +139,7 @@ function checkCooldown(username) {
   }
   return 0;
 }
+
 // Ouvinte para votos
 socket.on('votar-mensagem', async (dados) => {
     try {
@@ -182,6 +183,22 @@ socket.on('votar-mensagem', async (dados) => {
         console.error('Erro ao processar voto:', error);
     }
 });
+
+// Após inserir a mensagem, retorne o ID
+const result = await pool.query(
+    'INSERT INTO messages (texto, usuario) VALUES ($1, $2) RETURNING id',
+    [dados.texto.trim(), socket.user]
+);
+
+const mensagemId = result.rows[0].id;
+
+// Enviar mensagem com ID para todos
+io.emit('receber-mensagem', { 
+    texto: dados.texto.trim(),
+    usuario: socket.user,
+    mensagemId: mensagemId  // ← AGORA COM ID!
+});
+
 // Rotas HTTP
 app.get('/', async (req, res) => {
   try {
@@ -326,5 +343,6 @@ process.on('SIGINT', async () => {
   await pool.end();
   process.exit(0);
 });
+
 
 
