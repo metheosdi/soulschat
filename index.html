@@ -567,16 +567,15 @@ function connectToServer() {
         socket.emit('request-history');
     });
 
-    socket.on('historico-completo', (historico) => {
+   socket.on('historico-completo', (historico) => {
     console.log('Histórico recebido:', historico);
     const chatContainer = document.getElementById('chat-container');
     chatContainer.innerHTML = '<div class="message system-msg">Carregando mensagens dos precursores...</div>';
     
     historico.forEach(msg => {
-        // Se a mensagem for antiga (sem campo usuario), usa "Viajante Desconhecido"
         const usuario = msg.usuario || 'Viajante Desconhecido';
         const isSelf = usuario === socket.user;
-        addMessageToChat(msg.texto, usuario, isSelf);
+        addMessageToChat(msg.texto, usuario, isSelf, msg.id); // ← AGORA COM msg.id
     });
     addSystemMessage('Histórico carregado.');
 });
@@ -835,6 +834,7 @@ installBtn.addEventListener('click', () => {
 });</script>
 </body>
 </html>
+
 
 
 
