@@ -121,6 +121,46 @@
             right: 2rem;
             background: #335;
         }
+        .votos-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.message:hover .votos-container {
+    opacity: 1;
+}
+
+.btn-voto {
+    background: var(--color-ui-dark);
+    border: 1px solid var(--color-accent);
+    border-radius: 3px;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: all 0.3s ease;
+}
+
+.btn-voto:hover {
+    transform: scale(1.1);
+}
+
+.btn-elogio:hover {
+    background: #1a3a2b;
+    border-color: #4caf50;
+}
+
+.btn-critica:hover {
+    background: #441201;
+    border-color: #f44336;
+}
+
+.contador-votos {
+    font-size: 0.9em;
+    margin-left: 0.3rem;
+}
     </style>
     
 </head>
@@ -544,6 +584,14 @@ function connectToServer() {
    socket.on('receber-mensagem', (data) => {
     console.log('Mensagem recebida:', data.texto, 'de:', data.usuario);
     
+    const isSelf = data.usuario === socket.user;
+    addMessageToChat(data.texto, data.usuario, isSelf, data.mensagemId);
+    
+    setTimeout(() => {
+        mostrarNotificacao(data.texto, data.usuario);
+    }, 1000);
+});
+    
     // Verifica se a mensagem é do próprio usuário
     const isSelf = data.usuario === socket.user;
     addMessageToChat(data.texto, data.usuario, isSelf);
@@ -642,7 +690,7 @@ function clearForm() {
 }
 
 // GERENCIAMENTO DE CHAT
-function addMessageToChat(text, usuario = 'Sistema', isSelf = false) {
+function addMessageToChat(text, usuario = 'Sistema', isSelf = false, messageId = null) {
     if (text === lastMessageText) {
         console.log('Mensagem duplicada ignorada:', text);
         return;
@@ -653,15 +701,31 @@ function addMessageToChat(text, usuario = 'Sistema', isSelf = false) {
     msgElement.classList.add('message');
     if (isSelf) msgElement.classList.add('self');
     
-    // Adicionar nome do usuário acima da mensagem
+    // Nome do usuário
     const userElement = document.createElement('div');
     userElement.style.fontSize = '0.8em';
     userElement.style.opacity = '0.7';
     userElement.style.marginBottom = '0.3rem';
     userElement.textContent = usuario;
     
+    // Texto da mensagem
     const textElement = document.createElement('div');
     textElement.textContent = text;
+    
+    // Container de votos (apenas para mensagens com ID)
+    if (messageId) {
+        const votosContainer = document.createElement('div');
+        votosContainer.classList.add('votos-container');
+        votosContainer.innerHTML = `
+            <button class="btn-voto btn-elogio" onclick="votarMensagem(${messageId}, 'elogio')">
+                👍 <span class="contador-votos" id="elogio-${messageId}">0</span>
+            </button>
+            <button class="btn-voto btn-critica" onclick="votarMensagem(${messageId}, 'critica')">
+                👎 <span class="contador-votos" id="critica-${messageId}">0</span>
+            </button>
+        `;
+        msgElement.appendChild(votosContainer);
+    }
     
     msgElement.appendChild(userElement);
     msgElement.appendChild(textElement);
@@ -682,7 +746,22 @@ function addSystemMessage(text) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
     saveChatHistory();
 }
+// FUNÇÃO PARA VOTAR EM MENSAGENS
+async function votarMensagem(mensagemId, tipoVoto) {
+    if (!socket || !socket.connected) {
+        addSystemMessage('Conecte-se para votar.');
+        return;
+    }
 
+    try {
+        socket.emit('votar-mensagem', {
+            mensagemId: mensagemId,
+            tipoVoto: tipoVoto
+        });
+    } catch (error) {
+        console.error('Erro ao votar:', error);
+    }
+}
 // INICIALIZAÇÃO
 window.addEventListener('load', function() {
     // Preenche os dropdowns de palavras
@@ -718,7 +797,14 @@ document.getElementById('notif-btn').addEventListener('click', () => {
         alert('Seu navegador não suporta notificações');
     }
 });
+    // Receber atualizações de votos
+socket.on('atualizar-votos', (dados) => {
+    const elogioElement = document.getElementById(`elogio-${dados.mensagemId}`);
+    const criticaElement = document.getElementById(`critica-${dados.mensagemId}`);
     
+    if (elogioElement) elogioElement.textContent = dados.elogios;
+    if (criticaElement) criticaElement.textContent = dados.criticas;
+});
 </script>
     <script>// Registrar Service Worker para PWA
 if ('serviceWorker' in navigator) {
@@ -759,6 +845,7 @@ installBtn.addEventListener('click', () => {
 });</script>
 </body>
 </html>
+
 
 
 
