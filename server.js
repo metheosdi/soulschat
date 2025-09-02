@@ -44,7 +44,13 @@ async function initDatabase() {
         message_count INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-      
+      CREATE TABLE IF NOT EXISTS votos (
+        id SERIAL PRIMARY KEY,
+        mensagem_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+        usuario VARCHAR(50) NOT NULL,
+        tipo_voto VARCHAR(10) CHECK (tipo_voto IN ('elogio', 'critica')),
+        UNIQUE(mensagem_id, usuario)
+    );
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         texto TEXT NOT NULL,
@@ -54,6 +60,7 @@ async function initDatabase() {
       
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
       CREATE INDEX IF NOT EXISTS idx_messages_usuario ON messages(usuario);
+      CREATE INDEX IF NOT EXISTS idx_votos_mensagem ON votos(mensagem_id);
     `);
 
     // Criar usuário admin se não existir
@@ -132,7 +139,49 @@ function checkCooldown(username) {
   }
   return 0;
 }
+// Ouvinte para votos
+socket.on('votar-mensagem', async (dados) => {
+    try {
+        // Verificar se usuário já votou nesta mensagem
+        const votoExistente = await pool.query(
+            'SELECT id FROM votos WHERE mensagem_id = $1 AND usuario = $2',
+            [dados.mensagemId, socket.user]
+        );
 
+        if (votoExistente.rows.length > 0) {
+            // Atualizar voto existente
+            await pool.query(
+                'UPDATE votos SET tipo_voto = $1 WHERE id = $2',
+                [dados.tipoVoto, votoExistente.rows[0].id]
+            );
+        } else {
+            // Inserir novo voto
+            await pool.query(
+                'INSERT INTO votos (mensagem_id, usuario, tipo_voto) VALUES ($1, $2, $3)',
+                [dados.mensagemId, socket.user, dados.tipoVoto]
+            );
+        }
+
+        // Buscar contagem atualizada
+        const contagem = await pool.query(`
+            SELECT 
+                SUM(CASE WHEN tipo_voto = 'elogio' THEN 1 ELSE 0 END) as elogios,
+                SUM(CASE WHEN tipo_voto = 'critica' THEN 1 ELSE 0 END) as criticas
+            FROM votos 
+            WHERE mensagem_id = $1
+        `, [dados.mensagemId]);
+
+        // Enviar contagem atualizada para todos
+        io.emit('atualizar-votos', {
+            mensagemId: dados.mensagemId,
+            elogios: parseInt(contagem.rows[0].elogios) || 0,
+            criticas: parseInt(contagem.rows[0].criticas) || 0
+        });
+
+    } catch (error) {
+        console.error('Erro ao processar voto:', error);
+    }
+});
 // Rotas HTTP
 app.get('/', async (req, res) => {
   try {
@@ -277,4 +326,5 @@ process.on('SIGINT', async () => {
   await pool.end();
   process.exit(0);
 });
+
 
